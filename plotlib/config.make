@@ -8,8 +8,8 @@
 
 ### Use these to set library name 
 ### (you might add DP to name to keep double precision version separate)
-PLTLIB = libPlt.a
-#PLTLIB = libPltDP.a
+#PLTLIB = libPlt.a
+PLTLIB = libPltDP.a
 
 
 # Some fortrans need trailing underscores in C interface symbols (see Xwin.c)
@@ -51,11 +51,11 @@ DEFINE = -DUNDERSCORE
 
 ###-------------------------------------------------------------------------
 ###  Uncomment for Linux, using Intel Fortran compiler 8.x
-FC = ifort
+FC = gfortran
 CC  = gcc
  
 # Uncomment to make double-precision version
-#DP = -r8
+DP = -fdefault-real-8 -fdefault-integer-8
 
 FFLAGS  = -O3 $(DP)
 CFLAGS  = -O3 $(DEFINE)

@@ -51,7 +51,7 @@ DEFINE = -DUNDERSCORE
 
 ###-------------------------------------------------------------------------
 ###  Uncomment for Linux, using Intel Fortran compiler 8.x
-FC = gfortran
+FC = flang
 CC  = gcc
  
 # Uncomment to make double-precision version

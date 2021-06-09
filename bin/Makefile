@@ -99,7 +99,7 @@ CFLAGS = -O -DUNDERSCORE
 #FFLAGS = -g -O0 -C
 ##--------------------------
 ### Intel Fortran Compiler
-FC = gfortran
+FC = flang
 FFLAGS = -O
 FFLOPT = -O
 #FTNLIB = -Vaxlib /usr/lib/C-ctype.o /usr/lib/C_name.o /usr/lib/ctype-info.o
@@ -108,8 +108,8 @@ FFLOPT = -O
 
 ##--------------------------
 ### Double precision option
-FFLAGS = -O -fdefault-real-8 -CB
-FFLOPT = -O -fdefault-real-8 -CB
+#FFLAGS = -O -fdefault-real-8 -CB
+#FFLOPT = -O -fdefault-real-8 -CB
 PLTOBJ = ../plotlib/libPltDP.a 
 
 FFLAGS = -O -fdefault-real-8 -fdefault-integer-8 -ffpe-trap=invalid,zero,overflow

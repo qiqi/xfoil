@@ -1,0 +1,45 @@
+warning: overriding the module target triple with wasm32-unknown-emscripten [-Woverride-module]
+Common symbols are not yet implemented for Wasm
+UNREACHABLE executed at /b/s/w/ir/cache/builder/emscripten-releases/llvm-project/llvm/lib/MC/MCWasmStreamer.cpp:139!
+PLEASE submit a bug report to https://bugs.llvm.org/ and include the crash backtrace, preprocessed source, and associated run script.
+Stack dump:
+0.	Program arguments: /home/qiqi/Xfoil/emsdk/upstream/bin/clang++ -target wasm32-unknown-emscripten -DEMSCRIPTEN -fignore-exceptions -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr -D__EMSCRIPTEN_major__=2 -D__EMSCRIPTEN_minor__=0 -D__EMSCRIPTEN_tiny__=23 -D_LIBCPP_ABI_VERSION=2 -Dunix -D__unix -D__unix__ -Werror=implicit-function-declaration -Xclang -iwithsysroot/include/SDL --sysroot=/home/qiqi/Xfoil/emsdk/upstream/emscripten/cache/sysroot -Xclang -iwithsysroot/include/compat -c xfoil.bc -o xfoil.js
+1.	Code generation
+ #0 0x00007fc3692d7bd3 llvm::sys::PrintStackTrace(llvm::raw_ostream&, int) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x18dbbd3)
+ #1 0x00007fc3692d59ce llvm::sys::RunSignalHandlers() (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x18d99ce)
+ #2 0x00007fc3692d6f4d llvm::sys::CleanupOnSignal(unsigned long) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x18daf4d)
+ #3 0x00007fc36920aec3 (anonymous namespace)::CrashRecoveryContextImpl::HandleCrash(int, unsigned long) CrashRecoveryContext.cpp:0:0
+ #4 0x00007fc36920b02e CrashRecoverySignalHandler(int) CrashRecoveryContext.cpp:0:0
+ #5 0x00007fc3679cf3c0 __restore_rt (/lib/x86_64-linux-gnu/libpthread.so.0+0x153c0)
+ #6 0x00007fc363c5918b raise (/lib/x86_64-linux-gnu/libc.so.6+0x4618b)
+ #7 0x00007fc363c38859 abort (/lib/x86_64-linux-gnu/libc.so.6+0x25859)
+ #8 0x00007fc36921afb1 (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x181efb1)
+ #9 0x00007fc36ab2ac09 (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x312ec09)
+#10 0x00007fc369c7d258 llvm::AsmPrinter::emitGlobalVariable(llvm::GlobalVariable const*) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x2281258)
+#11 0x00007fc369c840ac llvm::AsmPrinter::doFinalization(llvm::Module&) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x22880ac)
+#12 0x00007fc36945a615 llvm::FPPassManager::doFinalization(llvm::Module&) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x1a5e615)
+#13 0x00007fc369453635 llvm::legacy::PassManagerImpl::run(llvm::Module&) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x1a57635)
+#14 0x00007fc3665d9086 (anonymous namespace)::EmitAssemblyHelper::EmitAssemblyWithNewPassManager(clang::BackendAction, std::unique_ptr<llvm::raw_pwrite_stream, std::default_delete<llvm::raw_pwrite_stream> >) BackendUtil.cpp:0:0
+#15 0x00007fc3665d3803 clang::EmitBackendOutput(clang::DiagnosticsEngine&, clang::HeaderSearchOptions const&, clang::CodeGenOptions const&, clang::TargetOptions const&, clang::LangOptions const&, llvm::StringRef, llvm::Module*, clang::BackendAction, std::unique_ptr<llvm::raw_pwrite_stream, std::default_delete<llvm::raw_pwrite_stream> >) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2664803)
+#16 0x00007fc3668fa28a clang::CodeGenAction::ExecuteAction() (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x298b28a)
+#17 0x00007fc366ef3240 clang::FrontendAction::Execute() (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2f84240)
+#18 0x00007fc366e69eaf clang::CompilerInstance::ExecuteAction(clang::FrontendAction&) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2efaeaf)
+#19 0x00007fc366f7229c clang::ExecuteCompilerInvocation(clang::CompilerInstance*) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x300329c)
+#20 0x0000000000214560 cc1_main(llvm::ArrayRef<char const*>, char const*, void*) (/home/qiqi/Xfoil/emsdk/upstream/bin/clang+++0x214560)
+#21 0x000000000021211d ExecuteCC1Tool(llvm::SmallVectorImpl<char const*>&) driver.cpp:0:0
+#22 0x00007fc366b41992 void llvm::function_ref<void ()>::callback_fn<clang::driver::CC1Command::Execute(llvm::ArrayRef<llvm::Optional<llvm::StringRef> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, bool*) const::$_1>(long) Job.cpp:0:0
+#23 0x00007fc36920add7 llvm::CrashRecoveryContext::RunSafely(llvm::function_ref<void ()>) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libLLVM-13git.so+0x180edd7)
+#24 0x00007fc366b414e7 clang::driver::CC1Command::Execute(llvm::ArrayRef<llvm::Optional<llvm::StringRef> >, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >*, bool*) const (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2bd24e7)
+#25 0x00007fc366b0ca08 clang::driver::Compilation::ExecuteCommand(clang::driver::Command const&, clang::driver::Command const*&) const (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2b9da08)
+#26 0x00007fc366b0ccd7 clang::driver::Compilation::ExecuteJobs(clang::driver::JobList const&, llvm::SmallVectorImpl<std::pair<int, clang::driver::Command const*> >&) const (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2b9dcd7)
+#27 0x00007fc366b26da1 clang::driver::Driver::ExecuteCompilation(clang::driver::Compilation&, llvm::SmallVectorImpl<std::pair<int, clang::driver::Command const*> >&) (/home/qiqi/Xfoil/emsdk/upstream/bin/../lib/libclang-cpp.so.13git+0x2bb7da1)
+#28 0x00000000002119e6 main (/home/qiqi/Xfoil/emsdk/upstream/bin/clang+++0x2119e6)
+#29 0x00007fc363c3a0b3 __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x270b3)
+#30 0x000000000020ed4a _start (/home/qiqi/Xfoil/emsdk/upstream/bin/clang+++0x20ed4a)
+clang-13: error: clang frontend command failed with exit code 134 (use -v to see invocation)
+clang version 13.0.0 (/b/s/w/ir/cache/git/chromium.googlesource.com-external-github.com-llvm-llvm--project 5852582532b3eb3ea8da51a1e272d8d017bd36c9)
+Target: wasm32-unknown-emscripten
+Thread model: posix
+InstalledDir: /home/qiqi/Xfoil/emsdk/upstream/bin
+clang-13: note: diagnostic msg: Error generating preprocessed source(s) - no preprocessable inputs.
+emcc: error: '/home/qiqi/Xfoil/emsdk/upstream/bin/clang++ -target wasm32-unknown-emscripten -DEMSCRIPTEN -fignore-exceptions -mllvm -combiner-global-alias-analysis=false -mllvm -enable-emscripten-sjlj -mllvm -disable-lsr -D__EMSCRIPTEN_major__=2 -D__EMSCRIPTEN_minor__=0 -D__EMSCRIPTEN_tiny__=23 -D_LIBCPP_ABI_VERSION=2 -Dunix -D__unix -D__unix__ -Werror=implicit-function-declaration -Xclang -iwithsysroot/include/SDL --sysroot=/home/qiqi/Xfoil/emsdk/upstream/emscripten/cache/sysroot -Xclang -iwithsysroot/include/compat -c xfoil.bc -o xfoil.js' failed (returned 134)

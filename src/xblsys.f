@@ -406,8 +406,6 @@ C
 C
       IF(RLX*ABS(DXT/(X2-X1)) .GT. 0.05) RLX = 0.05*ABS((X2-X1)/DXT)
       IF(RLX*ABS(DA2)         .GT. 1.0 ) RLX = 1.0 *ABS(   1.0 /DA2)
-
-      WRITE(*,*) AMPL1, AMPL2, X1, X2, RES, AX !, RES, RES_A2, DA2, DAEPS
 C
 C---- check if converged
       IF(ABS(DA2) .LT. DAEPS) GO TO 101

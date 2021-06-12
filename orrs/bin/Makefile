@@ -4,7 +4,7 @@ PLTOBJ = /home/codes/Xplot/libPlt.a
 
 #========================================
 #  Default compiler flags
-FC = flang
+FC = gfortran #flang
 FLG = -O -fdefault-real-8
 PLTLIB = -lX11
 FTNLIB =

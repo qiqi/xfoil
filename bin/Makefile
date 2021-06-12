@@ -46,7 +46,7 @@ PLTLIB = -L/usr/X11R6/lib -lX11
 ###  FFLOPT used for xsolve.f
 INSTALLCMD = install -s
 
-CC = clang
+CC = gcc # clang
 CFLAGS = -O -DUNDERSCORE
 
 ##--------------------------
@@ -96,7 +96,7 @@ CFLAGS = -O -DUNDERSCORE
 #FFLAGS = -g -O0 -C
 ##--------------------------
 ### Intel Fortran Compiler
-FC = flang
+FC = gfortran #flang
 #FTNLIB = -Vaxlib /usr/lib/C-ctype.o /usr/lib/C_name.o /usr/lib/ctype-info.o
 #FTNLIB = -Vaxlib
 #FTNLIB = -i_dynamic

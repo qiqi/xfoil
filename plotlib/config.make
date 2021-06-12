@@ -13,8 +13,8 @@
 # This should work for most of the "unix" fortran compilers
 DEFINE = -DUNDERSCORE
 
-FC = flang
-CC  = clang
+FC = gfortran # flang
+CC  = gcc # clang
 DP = -fdefault-real-8
 
 FFLAGS  = -m64 -O2 $(DP)

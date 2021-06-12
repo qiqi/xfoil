@@ -20,7 +20,7 @@ C
 C---- include polar variable indexing parameters
       INCLUDE 'PINDEX.INC'
 C
-      PARAMETER (IQX=360, IPX=5, ISX=2)
+      PARAMETER (IQX=370, IPX=5, ISX=2)
       PARAMETER (IWX=IQX/8+2)
       PARAMETER (IBX=4*IQX)
       PARAMETER (IZX=IQX+IWX)
@@ -38,7 +38,8 @@ C
      &        LBFLAP,LFLAP,LEIW,LSCINI,LFOREF,LNORM,LGSAME,LDCPLOT,
      &        LPLCAM, LQSYM ,LGSYM , LQGRID, LGGRID, LGTICK, 
      &        LQSLOP,LGSLOP, LCSLOP, LQSPPL, LGEOPL, LGPARM,
-     &        LCPGRD,LBLGRD, LBLSYM, LCMINP, LHMOMP, LFREQP
+     &        LCPGRD,LBLGRD, LBLSYM, LCMINP, LHMOMP, LFREQP,
+     &        LCPINV
       LOGICAL LPLOT,LSYM,LIQSET,LCLIP,LVLAB,LCURS,LLAND
       LOGICAL LPGRID, LPCDW, LPLIST, LPLEGN, LAECEN, LPCDH, LPCMDOT
       LOGICAL TFORCE
@@ -102,7 +103,7 @@ C
      &             CPOLXY(IQX,2,NPX),
      &             MACHP1(NPX),
      &             REYNP1(NPX),
-     &             ACRITP(NPX),
+     &             ACRITP(ISX,NPX),
      &             PTRATP(NPX),
      &             ETAPP(NPX),
      &             XSTRIPP(ISX,NPX),
@@ -135,7 +136,8 @@ C
      &             LCPGRD,LBLGRD,LBLSYM,
      &             LPLOT,LSYM,LIQSET,LCLIP,LVLAB,LCURS,LLAND,
      &             LPGRID,LPCDW,LPLIST,LPLEGN,LAECEN,LPCDH,LPCMDOT,
-     &             LCMINP, LHMOMP, LFREQP
+     &             LCMINP, LHMOMP, LFREQP,
+     &             LCPINV
       COMMON/CR14/ XB(IBX),YB(IBX),
      &             XBP(IBX),YBP(IBX),SB(IBX),SNEW(5*IBX),
      &             XBF,YBF,XOF,YOF,HMOM,HFX,HFY,
@@ -153,10 +155,13 @@ C
      &             USLP(IVX,ISX),GUXQ(IVX,ISX),GUXD(IVX,ISX),
      &             TAU(IVX,ISX),DIS(IVX,ISX),CTQ(IVX,ISX),
      &             VTI(IVX,ISX),
-     &             REINF1,REINF,REINF_CL,ACRIT,
+     &             REINF1,REINF,REINF_CL,
+     &             ACRIT(ISX),
      &             XSTRIP(ISX),XOCTR(ISX),YOCTR(ISX),XSSITR(ISX),
-     &             UINV_A(IVX,ISX)
-      COMMON/CI05/ IBLTE(ISX),NBL(ISX),IPAN(IVX,ISX),ISYS(IVX,ISX),NSYS,
+     &             UINV_A(IVX,ISX),
+     &             TINDEX(ISX)
+      COMMON/CI05/ IXBLP,
+     &             IBLTE(ISX),NBL(ISX),IPAN(IVX,ISX),ISYS(IVX,ISX),NSYS,
      &             ITRAN(ISX), IDAMP
       COMMON/CL02/ TFORCE(ISX)
       COMMON/CR17/ RMSBL,RMXBL,RLX,VACCEL
@@ -553,6 +558,8 @@ C   XOCTR(.)    actual transition x/c locations
 C   YOCTR(.)    actual transition y/c locations
 C   XSSITR(.)   actual transition xi locations
 C
+C   IXBLP   = 1  plot BL variables vs x
+C           = 2  plot BL variables vs s
 C   IBLTE(.)    BL array index at trailing edge
 C   NBL(.)      max BL array index
 C   IPAN(..)    panel index corresponding to BL location
@@ -560,6 +567,7 @@ C   ISYS(..)    BL Newton system line number corresponding to BL location
 C   NSYS        total number of lines in BL Newton system
 C   ITRAN(.)    BL array index of transition interval
 C   TFORCE(.)   .TRUE. if transition is forced due to transition strip
+C   TINDEX(.)   
 C
 C   IDAMP    = 0   use original enelope e^n f(H,Rtheta) for all profiles
 C            = 1   use modified enelope e^n f(H,Rtheta) for separating profile

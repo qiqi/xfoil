@@ -18,6 +18,7 @@ C
       UWT = 0.5
       CH = 0.02
 C
+      CALL PLINITIALIZE
       CALL PLOTS(0,IHARD,IDEV)
       CALL FACTOR(SIZE)
 C
@@ -85,11 +86,12 @@ c
 c
       close(7)
 C
-c      WRITE(6,*) 'Hit <cr>'
-c      READ (5,8000) ANS
-c 8000 FORMAT(A1)
-C
-      CALL PLOT(0.0,0.0,+999)
+      CALL PLFLUSH
+      WRITE(*,*) 'Hit <cr>'
+      READ (*,8000) ANS
+ 8000 FORMAT(A1)
+
+      CALL PLCLOSE
       STOP
       END
 

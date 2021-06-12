@@ -21,7 +21,7 @@ C***********************************************************************
       SUBROUTINE OPLSET(IDEV,IDEVRP,IPSLU,
      &                  SIZE,PAR,
      &                  XMARG,YMARG,XPAGE,YPAGE,
-     &                  CSIZE,SCRNFR,LCURS,LLAND)
+     &                  CSIZE,SCRNFR,LCURS,LLAND, ICOLS)
       LOGICAL LCURS,LLAND
 C-----------------------------------------------------------
 C     Allows user modification of various plot parameters.
@@ -33,6 +33,7 @@ C-----------------------------------------------------------
       DIMENSION IINPUT(20)
       DIMENSION RINPUT(20)
       LOGICAL ERROR, LGRAPH, LCOLOR
+      INTEGER ICOLS(2)
 C
  1000 FORMAT(A)
 C
@@ -55,7 +56,8 @@ C
       WRITE(*,2000) LGRAPH, SIZE, PAR,
      &              XPAGE,YPAGE, XMARG,YMARG, 
      &              CSIZE, SCRNFR,
-     &              CHCURS, CHLAND, LCOLOR
+     &              CHCURS, CHLAND, LCOLOR,
+     &              ICOLS(1), ICOLS(2)
  2000 FORMAT(' ...............................................'
      &     //'  G raphics-enable flag:       ', L2,
      &      /'  S ize of plot object         ', F6.2,'"'
@@ -66,7 +68,8 @@ C
      &      /'  W indow/screen size fraction ', F8.4
      &      /'  B lowup input method:        ', A 
      &      /'  O rientation of plot:        ', A 
-     &      /'  C olor PostScript output?    ', L2 )
+     &      /'  C olor PostScript output?    ', L2,
+     &      /'  L ine colors for top,bottom  ', 2I3 )
 C
  5    CALL ASKC('      Option, Value   (or <Return>) ^',COMAND,COMARG)
 C
@@ -159,6 +162,32 @@ C
         IF(     LCOLOR) IDEVRP = 4
         IF(.NOT.LCOLOR) IDEVRP = 2
 C
+      ELSEIF (INDEX('Ll',VAR).NE.0) THEN
+C------ set top and bottom-side colors
+        IF(NINPUT.GE.2) THEN
+          ICOLS(1) = IINPUT(1)
+          ICOLS(2) = IINPUT(2)
+        ELSE
+ 20      WRITE(*,2200)
+ 2200    FORMAT(
+     &  /'  1  black  '
+     &  /'  2  white  '
+     &  /'  3  red    '
+     &  /'  4  orange ' 
+     &  /'  5  yellow ' 
+     &  /'  6  green  '
+     &  /'  7  cyan   '
+     &  /'  8  blue   '
+     &  /'  9  violet '
+     &  /' 10  magenta' )
+C
+        WRITE(*,*) 'Select top,bottom line-plot colors'
+        READ(*,*,ERR=20) ICOLS(1), ICOLS(2)
+       ENDIF
+
+       ICOLS(1) = MAX( 1, MIN( 10, ICOLS(1) ) )
+       ICOLS(2) = MAX( 1, MIN( 10, ICOLS(2) ) )
+
       ELSE
         WRITE(*,*) '*** Item not recognized ***'
       ENDIF

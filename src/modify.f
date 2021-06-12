@@ -67,10 +67,11 @@ C           ILMOD       index l of Y(i,l) function which was modified
 C--------------------------------------------------------------------------
 C
 C---- local arrays for accumulating user-specified points
-      PARAMETER (NUX=100)
-      DIMENSION XU(NUX), YU(NUX), YUD(NUX)
-      DIMENSION IUSORT(NUX)
-      LOGICAL LDONE, LPLNEW
+      PARAMETER (NUX=200)
+      DIMENSION XU(NUX), YU(NUX)
+      DIMENSION XP(NUX), YP(NUX), YPD(NUX)
+      DIMENSION IPSORT(NUX)
+      LOGICAL LDONE, LPLNEW, LEDIT, LEXIT
 C
       LOGICAL LGUI
       CHARACTER*1 CHKEY
@@ -81,51 +82,115 @@ C
       CALL GETPEN(IPEN0)
 C
       KDONE  = 1
-      KERASE = 2
-      KABORT = 3
-      KINSIDE = 4
+      KABORT = 2
+      KERASE = 3
+      KSWITCH = 4
+      KINSIDE = 5
 C
       XDWIN = XWIN(2) - XWIN(1)
       YDWIN = YWIN(2) - YWIN(1)
 C
       XWS = XDWIN/SIZE
       YWS = YDWIN/SIZE
+C---- initialize current plot scales,offsets in case KEYOFF changes them
+      XSF0 = XSF
+      YSF0 = YSF
+      XOFF0 = XOFF
+      YOFF0 = YOFF
 C
       WRITE(*,*)
-      WRITE(*,*) 'Click on new values to change shape...'
-      WRITE(*,*) 'Or.. Click buttons or type A,E,D for special action'
-      WRITE(*,*) 'Or.. Type I,O,P to In,Out,Pan with cursor...'
+      WRITE(*,*) '_________________ Spline input mode _________________'
+      WRITE(*,*) ' Click on new values to input new shape, or ...'
+      WRITE(*,*) ' ... type S,E,A,D or click buttons for special action'
+      WRITE(*,*) ' ... type I,O,P to In,Out,Pan towards cursor'
       WRITE(*,*)
 C
-      NUBEG = 1
+      NU = 0
+      NP = 0
+      JP = 0
+      IMOD1 = 0
+      IMOD2 = 0
+      LPLNEW = .FALSE.
+      LEDIT  = .FALSE.
+      LEXIT  = .FALSE.
+
+ 1100 FORMAT(1X, I3)
+C
+C=========================================================================
+C---- Plot everything (background plot, user points, etc)
+C     XU,YU (NU) are user specfied points in plot coordinates
+C     X,Y contains input X,Y arrays for modification
 C
  5    CONTINUE
-      CALL NEWPEN(5)
+cc      WRITE(*,*) 'MODIFY - Replotting everything LPLNEW ',LPLNEW
+cc      WRITE(*,*) '    NU,IMOD1,IMOD2 ',NU,IMOD1,IMOD2
 C
-      X1 = XWIN(1) + 0.71*XDWIN
-      X2 = XWIN(1) + 0.79*XDWIN
+      IF(LPLNEW) THEN
+C------- scales,offsets have changed... replot
+       CALL NEWCOLOR(ICOL0)
+       CALL NEWPLOT
+C
+       CALL NEWCOLORNAME(COLPNT)
+C------- plot current store of input points
+       DO IU = 1, NU
+         CALL PLSYMB(XU(IU),YU(IU),SH,3,0.0,0)
+       ENDDO
+       LPLNEW = .FALSE.
+      ENDIF
+C
+C------ plot splined user changes in modified region
+      IF(NP.GT.0) THEN
+       IF(COLMOD(1:1).NE.' ') THEN
+        CALL NEWCOLORNAME(COLMOD)
+        IPEN = 3
+        XX = (XP(1)-XOFF)*XSF
+        YY = (YP(1)-YOFF)*YSF
+        CALL PLOT(XX,YY,IPEN)
+        NPL = 11
+        DO I = 2, NP
+          DX = XP(I)-XP(I-1)
+          DO L = 1, NPL
+            FRAC = FLOAT(L-1)/FLOAT(NPL-1)          
+            XX = XP(I-1) + FRAC*DX
+            YY = SEVAL(XX,YP,YPD,XP,NP)
+            XX = (XX-XOFF)*XSF
+            YY = (YY-YOFF)*YSF
+            CALL PLOT(XX,YY,IPEN)
+            IPEN = 2
+          ENDDO
+        ENDDO
+        CALL PLFLUSH
+       ENDIF
+      ENDIF
+C
+C---- put up GUI boxes
+      CALL NEWPEN(5)
       Y1 = YWIN(1) + 0.01*YDWIN
       Y2 = YWIN(1) + 0.05*YDWIN
+C
+      X1 = XWIN(2) - 0.08*XDWIN
+      X2 = XWIN(2) - 0.01*XDWIN
+      CALL GUIBOX(KDONE , X1,X2,Y1,Y2, 'GREEN', ' Done ')
+C
+      X1 = X1 - 0.08*XDWIN
+      X2 = X2 - 0.08*XDWIN
       CALL GUIBOX(KABORT, X1,X2,Y1,Y2, 'RED'   , ' Abort ')
 C
-      X1 = XWIN(1) + 0.81*XDWIN
-      X2 = XWIN(1) + 0.89*XDWIN
-      Y1 = YWIN(1) + 0.01*YDWIN
-      Y2 = YWIN(1) + 0.05*YDWIN
-      CALL GUIBOX(KERASE, X1,X2,Y1,Y2, 'YELLOW', ' Erase ')
-C
-      X1 = XWIN(1) + 0.91*XDWIN
-      X2 = XWIN(1) + 0.99*XDWIN
-      Y1 = YWIN(1) + 0.01*YDWIN
-      Y2 = YWIN(1) + 0.05*YDWIN
-      CALL GUIBOX(KDONE , X1,X2,Y1,Y2, 'GREEN', ' Done ')
+      IF(.NOT.LEDIT) THEN
+       X1 = X1 - 0.08*XDWIN
+       X2 = X2 - 0.08*XDWIN
+       CALL GUIBOX(KERASE, X1,X2,Y1,Y2, 'YELLOW', ' Erase ')
+
+       X1 = XWIN(2) - 0.46*XDWIN
+       X2 = XWIN(2) - 0.26*XDWIN
+       CALL GUIBOX(KSWITCH, X1,X2,Y1,Y2, 'BLUE',' Switch to edit mode ')
+      ENDIF
 C
       X1 = XMOD(1)
       X2 = XMOD(2)
       Y1 = YMOD(1)
       Y2 = YMOD(2)
       CALL GUIBOX(KINSIDE, X1,X2,Y1,Y2, 'ORANGE' , ' ' )
-C
       CALL PLFLUSH
 C
       CALL NEWPEN(IPEN0)
@@ -133,97 +198,206 @@ C
       XWS = XDWIN/SIZE
       YWS = YDWIN/SIZE
 C
-C
+C========================================================================
  10   CONTINUE
       CALL NEWCOLORNAME(COLPNT)
-      DO NU = NUBEG, NUX
+ccc   WRITE(*,*) 'at label 10 LEDIT, JP ',LEDIT, JP
 C
-C------ fetch x-y point coordinates from user
-        CALL GETCURSORXY(XU(NU),YU(NU),CHKEY)
+C------ interactive dragging of points
+C------ if in edit mode check for edit/drag cursor GUI actions
+      IF(LEDIT .AND. JP.NE.0) THEN
+       CALL GETCURSORXYC(XIN,YIN,IBTN)
+ccc     WRITE(*,*) XIN,YIN,IBTN
+       IF(IBTN.EQ.0) THEN
+cc      WRITE(*,*) 'IBTN ',IBTN
+        JP = 0
+        GO TO 20
+       ENDIF
+C------ modify point plot coordinates
+       XU(JP) = XIN
+       YU(JP) = YIN
+C------ reprocess spline
+       GO TO 30
+      ENDIF
 C
+C
+C========================================================================
+C------ fetch x-y point coordinates from user mouse button or keypress
+  20  CALL GETCURSORXY(XIN,YIN,CHKEY)
+ccc      WRITE(*,*) 'at label 20 XIN,YIN,CHKEY ',XIN,YIN,CHKEY
 C------ save current plot scales,offsets in case KEYOFF changes them
         XSF0 = XSF
         YSF0 = YSF
         XOFF0 = XOFF
         YOFF0 = YOFF
 C
-C------ do possible pan,zoom operations based on CHKEY
-        CALL KEYOFF(XU(NU),YU(NU),CHKEY, 
+C------ check for pan,zoom operations based on character input CHKEY
+        CALL KEYOFF(XIN,YIN,CHKEY, 
      &              XWS,YWS, XOFF,YOFF,XSF,YSF, LPLNEW)
-C
+C------- adjust points for new plot offsets and scales 
         IF(LPLNEW) THEN
-C------- scales,offsets have changed... replot
-         CALL NEWCOLOR(ICOL0)
-         CALL NEWPLOT
-C
-         CALL NEWCOLORNAME(COLPNT)
-C
-C------- adjust for new plot offsets and scales, replot current store of clicks
-         DO IU = 1, NU-1
-           XU(IU) = ((XU(IU)/XSF0 + XOFF0) - XOFF)*XSF
-           YU(IU) = ((YU(IU)/YSF0 + YOFF0) - YOFF)*YSF
-           CALL PLSYMB(XU(IU),YU(IU),SH,3,0.0,0)
-         ENDDO
-C
-C------- will start by fetching NUBEG'th click point
-         NUBEG = NU
-         GO TO 5
+          DO IU = 1, NU
+            XU(IU) = ((XU(IU)/XSF0 + XOFF0) - XOFF)*XSF
+            YU(IU) = ((YU(IU)/YSF0 + YOFF0) - YOFF)*YSF
+          ENDDO
+C------- replot everything
+          GO TO 5
         ENDIF
 C
-        IF    (LGUI(KABORT,XU(NU),YU(NU))
-     &         .OR. INDEX('Aa',CHKEY).GT.0) THEN
+C------ check for GUI actions
+C
+C-------------------------------------------------------
+C------ ABORT quits input and exits without changes
+        IF(LGUI(KABORT,XIN,YIN)
+     &     .OR. INDEX('Aa',CHKEY).GT.0) THEN
+         WRITE(*,*) 'ABORT received'
 C------- return with no changes
          GO TO 90
 C
-        ELSEIF(LGUI(KERASE,XU(NU),YU(NU))
-     &         .OR. INDEX('Ee',CHKEY).GT.0) THEN
-         IF(NU.LE.1) THEN
+C-------------------------------------------------------
+C------ DONE with modifications
+        ELSEIF(LGUI(KDONE,XIN,YIN)
+     &         .OR. INDEX('Dd',CHKEY).GT.0) THEN
+         WRITE(*,*) 'DONE received'
+         LEXIT = .TRUE.
+C------- go process inputs
+         GO TO 30
+C
+C-------------------------------------------------------
+C------ ERASE last point
+        ELSEIF(.NOT. LEDIT .AND. 
+     &         (LGUI(KERASE,XIN,YIN) .OR. INDEX('Ee',CHKEY).GT.0)) THEN
+         IF(NU.LE.0) THEN
           WRITE(*,*) 'No more points to clear'
-          NUBEG = 1
+          NU = 0
          ELSE
 C-------- clear previous point, overplot it white to clear it from screen
-          NUBEG = NU - 1
           CALL NEWCOLORNAME('WHITE')
-          CALL PLSYMB(XU(NUBEG),YU(NUBEG),SH,3,0.0,0)
+          CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
           CALL PLFLUSH
+          NU = NU - 1
+          WRITE(*,1100) NU
+          GO TO 10
          ENDIF
 C
-C------- keep accepting points starting from NUBEG
-         GO TO 10
+C-------------------------------------------------------
+C------ SWITCH to edit mode, drag, delete or add points 
+        ELSEIF(LGUI(KSWITCH,XIN,YIN)
+     &         .OR. INDEX('Ss',CHKEY).GT.0) THEN
+C------- switch from point input to editing mode
+         LEDIT = .NOT. LEDIT
+         WRITE(*,*)
+         WRITE(*,*) '________________ Spline edit mode ________________'
+         WRITE(*,*) ' Drag points to change shape, or ...'
+         WRITE(*,*) ' ... type A,D or click buttons  for special action'
+         WRITE(*,*) ' ... type N to insert new point at cursor'
+         WRITE(*,*) ' ... type E to erase existing point nearest cursor'
+         WRITE(*,*) ' ... type I,O,P to In,Out,Pan towards cursor'
+         GO TO 30
 C
-        ELSEIF(LGUI(KDONE,XU(NU),YU(NU))
-     &         .OR. INDEX('Dd',CHKEY).GT.0) THEN
-C------- go process inputs
-         GO TO 20
+C-------------------------------------------------------
+C------ Check for input point clicked in window
+        ELSEIF(LGUI(KINSIDE,XIN,YIN)) THEN
+C------- normal click inside modify-window gets treated differently for editing
+C  
+C------------------------------------------------
+         IF(.NOT. LEDIT) THEN
+cc         WRITE(*,*) 'Inside point non-edit mode '
+           IF(NU.GE.NUX) THEN
+            WRITE(*,*) 'MODIFY: User-input array limit NUX reached'
+            GO TO 90
+           ENDIF
+C------- accumulation of points, add point to list
+           NU = NU + 1
+           XU(NU) = XIN
+           YU(NU) = YIN
+C------- plot small cross at input point
+           CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
+           CALL PLFLUSH
+           WRITE(*,1100) NU
 C
-        ELSEIF(LGUI(KINSIDE,XU(NU),YU(NU))) THEN
-C------- normal click inside modify-window: plot small cross at input point
-         CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
-         CALL PLFLUSH
+           GO TO 20
+C
+C------------------------------------------------
+         ELSE
+C--------- edit mode
+cc         WRITE(*,*) 'Inside point edit mode '
+C
+C--------- find closest point to cursor     
+           JP = 1
+           DSQMIN = (XIN-XU(JP))**2 + (YIN-YU(JP))**2
+           DO J = 2, NU
+             DSQ = (XIN-XU(J))**2 + (YIN-YU(J))**2
+             IF(DSQ.LT.DSQMIN) THEN
+               DSQMIN = DSQ
+               JP = J
+             ENDIF
+           END DO
+ccc        WRITE(*,*) 'Closest point JP ',JP,'Dsq ',DSQMIN
+C
+C--------- Input key options: N (new point), E (erase point)
+           IF(INDEX('Nn',CHKEY).GT.0) THEN
+C---------- add point to arrays at cursor position
+            WRITE(*,*) 'Adding point at cursor...'
+C---------- find position in x
+            JA = 0
+            DO J = 2,NU
+             IF(XIN.GE.XU(J-1) .AND. XIN.LT.XU(J)) JA = J
+            END DO         
+            IF(XIN.LT.XU(1 )) JA = 1
+            IF(XIN.GT.XU(NU)) JA = NU+1
+C
+            IF(NU.GE.NUX) THEN
+             WRITE(*,*) 'MODIXY: User-input array limit NUX reached'
+             GO TO 90
+            ENDIF
+C
+C---------- shift array and add point
+            IF(JA.NE.0) THEN
+             DO J = NU, JA, -1
+               XU(J+1) = XU(J)
+               YU(J+1) = YU(J)
+             END DO
+             XU(JA) = XIN
+             YU(JA) = YIN
+             NU = NU+1
+C----------- plot small cross at input point
+             CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
+             CALL PLFLUSH
+             WRITE(*,1100) NU
+            ENDIF
+            JP = 0
+            GO TO 30
+           ENDIF
+C
+C--------- delete point at cursor position
+           IF(CHKEY.EQ.'E' .OR. CHKEY.EQ.'e') THEN
+            WRITE(*,2050) JP
+ 2050       FORMAT(1X,'Deleting point',I3,' nearest cursor')
+            DO J = JP+1,NU
+              XU(J-1) = XU(J)
+              YU(J-1) = YU(J)
+            END DO
+            NU = NU-1
+            WRITE(*,1100) NU
+C
+            JP = 0
+            LPLNEW = .TRUE.
+            GO TO 30
+           ENDIF
+C
+         ENDIF
 C
         ELSE
-C------- must be somewhere outside
-         GO TO 20
+C------- click outside of plot window
+         WRITE(*,*) 'Click outside plot window ignored'
+         GO TO 10
 C
         ENDIF
 C
-        WRITE(*,1100) NU
- 1100   FORMAT(1X, I3)
-C
-      ENDDO
-      WRITE(*,*) 'MODIFY: User-input array limit NUX reached'
-C
-C---- pick up here when finished with input
- 20   CONTINUE
-cc      IF(INDEX('Dd',CHKEY).GT.0) THEN
-ccC----- last point was entered with a "D" ...  add it to list
-cc       CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
-cc       CALL PLFLUSH
-cc      ELSE
-C----- discard last point
-       NU = NU-1
-cc      ENDIF
-C
+C=======================================================================
+C---- Process points input by user to define splined changes
+ 30   CONTINUE
 C
       IF(NU.LT.2) THEN
        WRITE(*,*)
@@ -231,90 +405,86 @@ C
        GO TO 90
       ENDIF
 C
+C---- put user-specified points into X,Y coordinate using plot offsets, scales
+      DO IU = 1, NU
+        XP(IU) = XU(IU)/XSF + XOFF
+        YP(IU) = YU(IU)/YSF + YOFF
+      ENDDO
+      NP = NU
 C---- set first-specified point
-      XUSP1 = XU(1)
-      YUSP1 = YU(1)
+      XPSP1 = XP(1)
+      YPSP1 = YP(1)
 C
-C---- undo plot offsets and scales
-      DO IU = 1, NU
-        XU(IU) = XU(IU)/XSF + XOFF
-        YU(IU) = YU(IU)/YSF + YOFF
+C---- sort XP,YP points in XP (use spline array YPD as temporary storage)
+      CALL HSORT(NP,XP,IPSORT)
+C
+      DO KSORT = 1, NP
+        IP = IPSORT(KSORT)
+        YPD(KSORT) = XP(IP)
+      ENDDO
+      DO IP = 1, NP
+        XP(IP) = YPD(IP)
       ENDDO
 C
-C---- sort XU,YU points in XU (use spline array YUD as temporary storage)
-      CALL HSORT(NU,XU,IUSORT)
-C
-      DO KSORT = 1, NU
-        IU = IUSORT(KSORT)
-        YUD(KSORT) = XU(IU)
+      DO KSORT = 1, NP
+        IP = IPSORT(KSORT)
+        YPD(KSORT) = YP(IP)
       ENDDO
-      DO IU = 1, NU
-        XU(IU) = YUD(IU)
-      ENDDO
-C
-      DO KSORT = 1, NU
-        IU = IUSORT(KSORT)
-        YUD(KSORT) = YU(IU)
-      ENDDO
-      DO IU = 1, NU
-        YU(IU) = YUD(IU)
+      DO IP = 1, NP
+        YP(IP) = YPD(IP)
       ENDDO
 C
 C---- remove doubled endpoints and tripled interior points
       DO IPASS = 1, 12345
         LDONE = .TRUE.
-        IU = 2
-        IF(XU(IU).EQ.XU(IU-1)) THEN
+        IP = 2
+        IF(XP(IP).EQ.XP(IP-1)) THEN
          LDONE = .FALSE.
-         IUREM = IU
+         IPREM = IP
         ENDIF
-        DO IU = 3, NU
-          IF( XU(IU).EQ.XU(IU-1) .AND.
-     &        XU(IU).EQ.XU(IU-2)      ) THEN
+        DO IP = 3, NP
+          IF( XP(IP).EQ.XP(IP-1) .AND.
+     &        XP(IP).EQ.XP(IP-2)      ) THEN
            LDONE = .FALSE.
-           IUREM = IU
+           IPREM = IP
           ENDIF
         ENDDO
-        IU = NU
-        IF(XU(IU).EQ.XU(IU-1)) THEN
+        IP = NP
+        IF(XP(IP).EQ.XP(IP-1)) THEN
          LDONE = .FALSE.
-         IUREM = IU
+         IPREM = IP
         ENDIF
 C
         IF(LDONE) THEN
-         GO TO 30
+         GO TO 40
         ELSE
-         DO IU = IUREM, NU-1
-           XU(IU) = XU(IU+1)
-           YU(IU) = YU(IU+1)
+         DO IP = IPREM, NP-1
+           XP(IP) = XP(IP+1)
+           YP(IP) = YP(IP+1)
          ENDDO
-         NU = NU - 1
+         NP = NP - 1
         ENDIF
       ENDDO
 C
 C---- pick up here when no more points to be removed
- 30   CONTINUE
-      IF(NU.LT.2) THEN
+ 40   CONTINUE
+      IF(NP.LT.2) THEN
        WRITE(*,*)
        WRITE(*,*) 'Need at least 2 points'
        GO TO 90
       ENDIF
 C
-C
 C---- find which X,Y input point is closest to first-specified point
       ISMOD = 1
       ILMOD = 1
-C
 C---- go over all surface points
       DSQMIN = 1.0E24
       DO IL = 1, NLINE
         DO IS = 1, NSIDE
           DO I = IFRST(IS), ILAST(IS)
-C---------- convert input arrays to plot coordinates
-            XUI = (X(I   )-XOFF)*XSF
-            YUI = (Y(I,IL)-YOFF)*YSF
-            DSQ = (XUI-XUSP1)**2 + (YUI-YUSP1)**2
-C
+            XPI = X(I   )
+            YPI = Y(I,IL)
+            DSQ = (XPI-XPSP1)**2 + (YPI-YPSP1)**2
             IF(DSQ .LT. DSQMIN) THEN
 C------------ this point is the closest so far... note its indices
               DSQMIN = DSQ
@@ -336,19 +506,19 @@ C----- reset Y and dY/dX at first and last points of modified interval
        I = IFRST(IS)
        N = ILAST(IS) - IFRST(IS) + 1
 C
-       IU = 1
-       IF(XU(IU).GE.X1 .AND. XU(IU).LE.X2) THEN
+       IP = 1
+       IF(XP(IP).GE.X1 .AND. XP(IP).LE.X2) THEN
 C------ set function and derivative at left endpoint
-        YU(IU) = SEVAL(XU(IU),Y(I,IL),YD(I,IL),X(I),N)
-        YD1    = DEVAL(XU(IU),Y(I,IL),YD(I,IL),X(I),N)
+        YP(IP) = SEVAL(XP(IP),Y(I,IL),YD(I,IL),X(I),N)
+        YD1    = DEVAL(XP(IP),Y(I,IL),YD(I,IL),X(I),N)
        ELSE
         YD1 = -999.0
        ENDIF
 C
-       IU = NU
-       IF(XU(IU).GE.X1 .AND. XU(IU).LE.X2) THEN
-        YU(IU) = SEVAL(XU(IU),Y(I,IL),YD(I,IL),X(I),N)
-        YD2    = DEVAL(XU(IU),Y(I,IL),YD(I,IL),X(I),N)
+       IP = NP
+       IF(XP(IP).GE.X1 .AND. XP(IP).LE.X2) THEN
+        YP(IP) = SEVAL(XP(IP),Y(I,IL),YD(I,IL),X(I),N)
+        YD2    = DEVAL(XP(IP),Y(I,IL),YD(I,IL),X(I),N)
        ELSE
         YD2 = -999.0
        ENDIF
@@ -357,47 +527,55 @@ C
 C----- use natural spline end conditions (zero 3rd derivative)
        YD1 = -999.0
        YD2 = -999.0
-C
       ENDIF
 C
 C---- spline input function values
-      CALL SEGSPLD(YU,YUD,XU,NU,YD1,YD2)
+      CALL SEGSPLD(YP,YPD,XP,NP,YD1,YD2)
+C
+C---- replot screen with splined line and points
+      LPLNEW = .TRUE.
+      IF(.NOT.LEXIT) GO TO 5
 C
 C
+C---- Modify input points in user-specified segment
 C---- go over all points on modified segment
-      IMOD1 = IFRST(IS)
+ 60   IMOD1 = IFRST(IS)
       DO I = IFRST(IS), ILAST(IS)
         XI = X(I)
-C
-        IF    (XI .LT. XU( 1)) THEN
+        IF    (XI .LT. XP( 1)) THEN
 C------- current point is before modified interval...try next point
          IMOD1 = I
-        ELSEIF(XI .LE. XU(NU)) THEN
+        ELSEIF(XI .LE. XP(NP)) THEN
 C------- stuff new point into Vspec array and plot it
-         Y(I,IL) = SEVAL(XI,YU,YUD,XU,NU)
+         Y(I,IL) = SEVAL(XI,YP,YPD,XP,NP)
         ELSE
 C------- went past modified interval...finish up
          IMOD2 = I
-         GO TO 50
+         GO TO 70
         ENDIF
       ENDDO
       IMOD2 = ILAST(IS)
- 50   CONTINUE
 C
-      IF(COLMOD(1:1).NE.' ') THEN
+C---- Replot with changes
+ 70   CALL NEWCOLOR(ICOL0)
+      CALL NEWPLOT
+C------- plot splined input line in modified region
+      IF(IMOD1.NE.0 .AND. IMOD2.NE.0) THEN
+       IF(COLMOD(1:1).NE.' ') THEN
 C----- plot modified function over modified interval
-       CALL NEWCOLORNAME(COLMOD)
-       IPEN = 3
-       DO I = IMOD1, IMOD2
-         XP = (X(I   )-XOFF)*XSF
-         YP = (Y(I,IL)-YOFF)*YSF
-         CALL PLOT(XP,YP,IPEN)
-         IPEN = 2
-       ENDDO
-       CALL PLFLUSH
+        CALL NEWCOLORNAME(COLMOD)
+        IPEN = 3
+        DO I = IMOD1, IMOD2
+C----- scale X,Y to plot coordinates
+          XP = (X(I   )-XOFF)*XSF
+          YP = (Y(I,IL)-YOFF)*YSF
+          CALL PLOT(XP,YP,IPEN)
+          IPEN = 2
+        ENDDO
+        CALL PLFLUSH
+       ENDIF
       ENDIF
 C
-C---- return normally
       CALL NEWCOLOR(ICOL0)
       RETURN
 C
@@ -464,163 +642,340 @@ C--------------------------------------------------------------------------
 C
 C---- local arrays for accumulating user-specified points
       PARAMETER (NUX=200)
-      DIMENSION XU(NUX), YU(NUX), XUD(NUX), YUD(NUX), SU(NUX)
-      LOGICAL LDONE, LPLNEW
+      DIMENSION XU(NUX), YU(NUX)
+      DIMENSION XP(NUX), YP(NUX), XPD(NUX), YPD(NUX), SP(NUX)
+      LOGICAL LDONE, LPLNEW, LEDIT, LEXIT
 C
       LOGICAL LGUI
       CHARACTER*1 CHKEY
+      CHARACTER*20 COLPNT, COLMOD
 C
       DATA SH /0.010/
 C
       CALL GETCOLOR(ICOL0)
       CALL GETPEN(IPEN0)
 C
+      COLPNT = 'RED'
+      COLMOD = 'RED'
+
       KDONE  = 1
-      KERASE = 2
-      KABORT = 3
-      KINSIDE = 4
+      KABORT = 2
+      KERASE = 3
+      KSWITCH = 4
+      KINSIDE = 5
 C
       XDWIN = XWIN(2) - XWIN(1)
       YDWIN = YWIN(2) - YWIN(1)
 C
       XWS = XDWIN/SIZE
       YWS = YDWIN/SIZE
+C---- initialize current plot scales,offsets in case KEYOFF changes them
+      XSF0 = XSF
+      YSF0 = YSF
+      XOFF0 = XOFF
+      YOFF0 = YOFF
 C
       WRITE(*,*)
-      WRITE(*,*) 'Click on new values to change shape...'
-      WRITE(*,*) 'Or.. Click buttons or type A,E,D for special action'
-      WRITE(*,*) 'Or.. Type I,O,P to In,Out,Pan with cursor...'
+      WRITE(*,*) '_________________ Spline input mode _________________'
+      WRITE(*,*) ' Click on new values to input new shape, or ...'
+      WRITE(*,*) ' ... type S,E,A,D or click buttons for special action'
+      WRITE(*,*) ' ... type I,O,P to In,Out,Pan towards cursor'
       WRITE(*,*)
 C
-      NUBEG = 1
+      NU = 0
+      NP = 0
+      JP = 0
+      IMOD1 = 0
+      IMOD2 = 0
+      LPLNEW = .FALSE.
+      LEDIT  = .FALSE.
+      LEXIT  = .FALSE.
+
+ 1100 FORMAT(1X, I3)
+C
+C=========================================================================
+C---- Plot everything (background plot, user points, etc)
+C     XU,YU (NU) are user specfied points in plot coordinates
+C     X,Y contains input X,Y arrays for modification
 C
  5    CONTINUE
-      CALL NEWPEN(5)
+cc      WRITE(*,*) 'MODIFXY - Replotting everything LPLNEW ',LPLNEW
+cc      WRITE(*,*) '    NU,IMOD1,IMOD2 ',NU,IMOD1,IMOD2
 C
-      X1 = XWIN(1) + 0.71*XDWIN
-      X2 = XWIN(1) + 0.79*XDWIN
+      IF(LPLNEW) THEN
+C------- scales,offsets have changed... replot
+       CALL NEWCOLOR(ICOL0)
+       CALL NEWPLOT
+C
+       CALL NEWCOLORNAME(COLPNT)
+C------- plot current store of input points
+       DO IU = 1, NU
+         CALL PLSYMB(XU(IU),YU(IU),SH,3,0.0,0)
+       ENDDO
+       LPLNEW = .FALSE.
+      ENDIF
+C
+C------ plot splined user changes in modified region
+      IF(NP.GT.0) THEN
+       IF(COLMOD(1:1).NE.' ') THEN
+        CALL NEWCOLORNAME(COLMOD)
+        IPEN = 3
+        XX = (XP(1)-XOFF)*XSF
+        YY = (YP(1)-YOFF)*YSF
+        CALL PLOT(XX,YY,IPEN)
+        NPL = 11
+        DO I = 2, NP
+          DS = SP(I)-SP(I-1)
+          DO L = 1, NPL
+            FRAC = FLOAT(L-1)/FLOAT(NPL-1)          
+            SS = SP(I-1) + FRAC*DS
+            XX = SEVAL(SS,XP,XPD,SP,NP)
+            YY = SEVAL(SS,YP,YPD,SP,NP)
+            XX = (XX-XOFF)*XSF
+            YY = (YY-YOFF)*YSF
+            CALL PLOT(XX,YY,IPEN)
+            IPEN = 2
+          ENDDO
+        ENDDO
+        CALL PLFLUSH
+       ENDIF
+      ENDIF
+C
+C---- put up GUI boxes
+      CALL NEWPEN(5)
       Y1 = YWIN(1) + 0.01*YDWIN
       Y2 = YWIN(1) + 0.05*YDWIN
+C
+      X1 = XWIN(2) - 0.08*XDWIN
+      X2 = XWIN(2) - 0.01*XDWIN
+      CALL GUIBOX(KDONE , X1,X2,Y1,Y2, 'GREEN', ' Done ')
+C
+      X1 = X1 - 0.08*XDWIN
+      X2 = X2 - 0.08*XDWIN
       CALL GUIBOX(KABORT, X1,X2,Y1,Y2, 'RED'   , ' Abort ')
 C
-      X1 = XWIN(1) + 0.81*XDWIN
-      X2 = XWIN(1) + 0.89*XDWIN
-      Y1 = YWIN(1) + 0.01*YDWIN
-      Y2 = YWIN(1) + 0.05*YDWIN
-      CALL GUIBOX(KERASE, X1,X2,Y1,Y2, 'YELLOW', ' Erase ')
-C
-      X1 = XWIN(1) + 0.91*XDWIN
-      X2 = XWIN(1) + 0.99*XDWIN
-      Y1 = YWIN(1) + 0.01*YDWIN
-      Y2 = YWIN(1) + 0.05*YDWIN
-      CALL GUIBOX(KDONE , X1,X2,Y1,Y2, 'GREEN', ' Done ')
+      IF(.NOT.LEDIT) THEN
+       X1 = X1 - 0.08*XDWIN
+       X2 = X2 - 0.08*XDWIN
+       CALL GUIBOX(KERASE, X1,X2,Y1,Y2, 'YELLOW', ' Erase ')
+
+       X1 = XWIN(2) - 0.46*XDWIN
+       X2 = XWIN(2) - 0.26*XDWIN
+       CALL GUIBOX(KSWITCH, X1,X2,Y1,Y2, 'BLUE',' Switch to edit mode ')
+      ENDIF
 C
       X1 = XMOD(1)
       X2 = XMOD(2)
       Y1 = YMOD(1)
       Y2 = YMOD(2)
       CALL GUIBOX(KINSIDE, X1,X2,Y1,Y2, 'ORANGE' , ' ' )
-C
       CALL PLFLUSH
 C
       CALL NEWPEN(IPEN0)
 C
+      XWS = XDWIN/SIZE
+      YWS = YDWIN/SIZE
 C
+C========================================================================
  10   CONTINUE
-      CALL NEWCOLORNAME('MAGENTA')
-      DO NU = NUBEG, NUX
+      CALL NEWCOLORNAME(COLPNT)
+ccc   WRITE(*,*) 'at label 10 LEDIT, JP ',LEDIT, JP
 C
-C------ fetch x-y point coordinates from user
-        CALL GETCURSORXY(XU(NU),YU(NU),CHKEY)
-CCC        write(*,*) ichar(chkey)
+C------ interactive dragging of points
+C------ if in edit mode check for edit/drag cursor GUI actions
+      IF(LEDIT .AND. JP.NE.0) THEN
+       CALL GETCURSORXYC(XIN,YIN,IBTN)
+ccc     WRITE(*,*) XIN,YIN,IBTN
+       IF(IBTN.EQ.0) THEN
+cc      WRITE(*,*) 'IBTN ',IBTN
+        JP = 0
+        GO TO 20
+       ENDIF
+C------ modify point plot coordinates
+       XU(JP) = XIN
+       YU(JP) = YIN
+C------ reprocess spline
+       GO TO 30
+      ENDIF
 C
+C
+C========================================================================
+C------ fetch x-y point coordinates from user mouse button or keypress
+  20  CALL GETCURSORXY(XIN,YIN,CHKEY)
+ccc      WRITE(*,*) 'at label 20 XIN,YIN,CHKEY ',XIN,YIN,CHKEY
 C------ save current plot scales,offsets in case KEYOFF changes them
         XSF0 = XSF
         YSF0 = YSF
         XOFF0 = XOFF
         YOFF0 = YOFF
 C
-C------ do possible pan,zoom operations based on CHKEY
-        CALL KEYOFF(XU(NU),YU(NU),CHKEY, 
+C------ check for pan,zoom operations based on character input CHKEY
+        CALL KEYOFF(XIN,YIN,CHKEY, 
      &              XWS,YWS, XOFF,YOFF,XSF,YSF, LPLNEW)
-C
+C------- adjust points for new plot offsets and scales 
         IF(LPLNEW) THEN
-C------- scales,offsets have changed... replot
-         CALL NEWCOLOR(ICOL0)
-         CALL NEWPLOT
-C
-         CALL NEWCOLORNAME('MAGENTA')
-C
-C------- adjust for new plot offsets and scales, replot current store of clicks
-         DO IU = 1, NU-1
-           XU(IU) = ((XU(IU)/XSF0 + XOFF0) - XOFF)*XSF
-           YU(IU) = ((YU(IU)/YSF0 + YOFF0) - YOFF)*YSF
-           CALL PLSYMB(XU(IU),YU(IU),SH,3,0.0,0)
-         ENDDO
-C
-C------- will start by fetching NUBEG'th click point
-         NUBEG = NU
-         GO TO 5
+          DO IU = 1, NU
+            XU(IU) = ((XU(IU)/XSF0 + XOFF0) - XOFF)*XSF
+            YU(IU) = ((YU(IU)/YSF0 + YOFF0) - YOFF)*YSF
+          ENDDO
+C------- replot everything
+          GO TO 5
         ENDIF
 C
+C------ check for GUI actions
 C
-C------ process special-action button keys
-        IF    (LGUI(KABORT,XU(NU),YU(NU))
-     &         .OR. INDEX('Aa',CHKEY).GT.0) THEN
+C-------------------------------------------------------
+C------ ABORT quits input and exits without changes
+        IF(LGUI(KABORT,XIN,YIN)
+     &     .OR. INDEX('Aa',CHKEY).GT.0) THEN
+         WRITE(*,*) 'ABORT received'
 C------- return with no changes
          GO TO 90
 C
-        ELSEIF(LGUI(KERASE,XU(NU),YU(NU))
-     &         .OR. INDEX('Ee',CHKEY).GT.0) THEN
-         IF(NU.LE.1) THEN
+C-------------------------------------------------------
+C------ DONE with modifications
+        ELSEIF(LGUI(KDONE,XIN,YIN)
+     &         .OR. INDEX('Dd',CHKEY).GT.0) THEN
+         WRITE(*,*) 'DONE received'
+         LEXIT = .TRUE.
+C------- go process inputs
+         GO TO 30
+C
+C-------------------------------------------------------
+C------ ERASE last point
+        ELSEIF(.NOT. LEDIT .AND. 
+     &         (LGUI(KERASE,XIN,YIN) .OR. INDEX('Ee',CHKEY).GT.0)) THEN
+         IF(NU.LE.0) THEN
           WRITE(*,*) 'No more points to clear'
-          NUBEG = 1
+          NU = 0
          ELSE
 C-------- clear previous point, overplot it white to clear it from screen
-          NUBEG = NU - 1
           CALL NEWCOLORNAME('WHITE')
-          CALL PLSYMB(XU(NUBEG),YU(NUBEG),SH,3,0.0,0)
+          CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
           CALL PLFLUSH
+          NU = NU - 1
+          WRITE(*,1100) NU
+          GO TO 10
          ENDIF
 C
-         WRITE(*,1100) NUBEG-1
+C-------------------------------------------------------
+C------ SWITCH to edit mode, drag, delete or add points 
+        ELSEIF(LGUI(KSWITCH,XIN,YIN)
+     &         .OR. INDEX('Ss',CHKEY).GT.0) THEN
+C------- switch from point input to editing mode
+         LEDIT = .NOT. LEDIT
+         WRITE(*,*)
+         WRITE(*,*) '________________ Spline edit mode ________________'
+         WRITE(*,*) ' Drag points to change shape, or ...'
+         WRITE(*,*) ' ... type A,D or click buttons  for special action'
+         WRITE(*,*) ' ... type N to insert new point at cursor'
+         WRITE(*,*) ' ... type E to erase existing point nearest cursor'
+         WRITE(*,*) ' ... type I,O,P to In,Out,Pan towards cursor'
+         GO TO 30
 C
-C------- keep accepting points starting from NUBEG
-         GO TO 10
+C-------------------------------------------------------
+C------ Check for input point clicked in window
+        ELSEIF(LGUI(KINSIDE,XIN,YIN)) THEN
+C------- normal click inside modify-window gets treated differently for editing
+C  
+C------------------------------------------------
+         IF(.NOT. LEDIT) THEN
+cc         WRITE(*,*) 'Inside point non-edit mode '
+           IF(NU.GE.NUX) THEN
+            WRITE(*,*) 'MODIFY: User-input array limit NUX reached'
+            GO TO 90
+           ENDIF
+C------- accumulation of points, add point to list
+           NU = NU + 1
+           XU(NU) = XIN
+           YU(NU) = YIN
+C------- plot small cross at input point
+           CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
+           CALL PLFLUSH
+           WRITE(*,1100) NU
 C
-        ELSEIF(LGUI(KDONE,XU(NU),YU(NU))
-     &         .OR. INDEX('Dd',CHKEY).GT.0) THEN
-C------- go process inputs
-         GO TO 20
+           GO TO 20
 C
-        ELSEIF(LGUI(KINSIDE,XU(NU),YU(NU))) THEN
-C------- normal click inside modify-window: plot small cross at input point
-         CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
-         CALL PLFLUSH
+C------------------------------------------------
+         ELSE
+C--------- edit mode
+cc         WRITE(*,*) 'Inside point edit mode '
+C
+C--------- find closest point to cursor     
+           JP = 1
+           DSQMIN = (XIN-XU(JP))**2 + (YIN-YU(JP))**2
+           DO J = 2, NU
+             DSQ = (XIN-XU(J))**2 + (YIN-YU(J))**2
+             IF(DSQ.LT.DSQMIN) THEN
+               DSQMIN = DSQ
+               JP = J
+             ENDIF
+           END DO
+ccc        WRITE(*,*) 'Closest point JP ',JP,'Dsq ',DSQMIN
+C
+C--------- Input key options: N (new point), E (erase point)
+           IF(INDEX('Nn',CHKEY).GT.0) THEN
+C---------- add point to arrays at cursor position
+            WRITE(*,*) 'Adding point at cursor...'
+C---------- find position in x
+            JA = 0
+            DO J = 2,NU
+             IF(XIN.GE.XU(J-1) .AND. XIN.LT.XU(J)) JA = J
+            END DO         
+            IF(XIN.LT.XU(1 )) JA = 1
+            IF(XIN.GT.XU(NU)) JA = NU+1
+C
+            IF(NU.GE.NUX) THEN
+             WRITE(*,*) 'MODIXY: User-input array limit NUX reached'
+             GO TO 90
+            ENDIF
+C
+C---------- shift array and add point
+            IF(JA.NE.0) THEN
+             DO J = NU, JA, -1
+               XU(J+1) = XU(J)
+               YU(J+1) = YU(J)
+             END DO
+             XU(JA) = XIN
+             YU(JA) = YIN
+             NU = NU+1
+C----------- plot small cross at input point
+             CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
+             CALL PLFLUSH
+             WRITE(*,1100) NU
+            ENDIF
+            JP = 0
+            GO TO 30
+           ENDIF
+C
+C--------- delete point at cursor position
+           IF(CHKEY.EQ.'E' .OR. CHKEY.EQ.'e') THEN
+            WRITE(*,2050) JP
+ 2050       FORMAT(1X,'Deleting point',I3,' nearest cursor')
+            DO J = JP+1,NU
+              XU(J-1) = XU(J)
+              YU(J-1) = YU(J)
+            END DO
+            NU = NU-1
+            WRITE(*,1100) NU
+C
+            JP = 0
+            LPLNEW = .TRUE.
+            GO TO 30
+           ENDIF
+C
+         ENDIF
 C
         ELSE
-C------- must be somewhere outside
-         GO TO 20
+C------- click outside of plot window
+         WRITE(*,*) 'Click outside plot window ignored'
+         GO TO 10
 C
         ENDIF
 C
-        WRITE(*,1100) NU
- 1100   FORMAT(1X, I3)
-C        
-      ENDDO
-      WRITE(*,*) 'MODIXY: User-input array limit NUX reached'
-C
-C---- pick up here when finished with input
- 20   CONTINUE
-cc      IF(INDEX('Dd',CHKEY).GT.0) THEN
-ccC----- last point was entered with a "D" ...  add it to list
-cc       CALL PLSYMB(XU(NU),YU(NU),SH,3,0.0,0)
-cc       CALL PLFLUSH
-cc      ELSE
-C----- discard last point
-       NU = NU-1
-cc      ENDIF
-C
+C=======================================================================
+C---- Process points input by user to define splined changes
+ 30   CONTINUE
 C
       IF(NU.LT.2) THEN
        WRITE(*,*)
@@ -628,72 +983,73 @@ C
        GO TO 90
       ENDIF
 C
-C---- set first- and last-specified point
-      XUSP1 = XU(1)
-      YUSP1 = YU(1)
-C
-      XUSP2 = XU(NU)
-      YUSP2 = YU(NU)
-C
-C---- undo plot offsets and scales
+C---- put user-specified points into X,Y coordinate using plot offsets, scales
       DO IU = 1, NU
-        XU(IU) = XU(IU)/XSF + XOFF
-        YU(IU) = YU(IU)/YSF + YOFF
+        XP(IU) = XU(IU)/XSF + XOFF
+        YP(IU) = YU(IU)/YSF + YOFF
       ENDDO
+      NP = NU
+C---- set first-specified point
+      XPSP1 = XP(1)
+      YPSP1 = YP(1)
+C---- set last-specified point
+      XPSP2 = XP(NP)
+      YPSP2 = YP(NP)
 C
 C---- remove doubled endpoints and tripled interior points
       DO IPASS = 1, 12345
         LDONE = .TRUE.
-        IU = 2
-        IF(XU(IU).EQ.XU(IU-1)) THEN
+        IP = 2
+        IF( (XP(IP).EQ.XP(IP-1)) .AND.
+     &      (YP(IP).EQ.YP(IP-1)) ) THEN
          LDONE = .FALSE.
-         IUREM = IU
+         IPREM = IP
         ENDIF
-        DO IU = 3, NU
-          IF( XU(IU).EQ.XU(IU-1) .AND.
-     &        XU(IU).EQ.XU(IU-2)      ) THEN
+        DO IP = 3, NP
+          IF( ((XP(IP).EQ.XP(IP-1)) .AND. (YP(IP).EQ.YP(IP-1))) .AND.
+     &        ((XP(IP).EQ.XP(IP-2)) .AND. (YP(IP).EQ.YP(IP-2))) ) THEN
            LDONE = .FALSE.
-           IUREM = IU
+           IPREM = IP
           ENDIF
         ENDDO
-        IU = NU
-        IF(XU(IU).EQ.XU(IU-1)) THEN
+        IP = NP
+        IF( (XP(IP).EQ.XP(IP-1)) .AND.
+     &      (YP(IP).EQ.YP(IP-1)) ) THEN
          LDONE = .FALSE.
-         IUREM = IU
+         IPREM = IP
         ENDIF
 C
         IF(LDONE) THEN
-         GO TO 30
+         GO TO 40
         ELSE
-         DO IU = IUREM, NU-1
-           XU(IU) = XU(IU+1)
-           YU(IU) = YU(IU+1)
+         DO IP = IPREM, NP-1
+           XP(IP) = XP(IP+1)
+           YP(IP) = YP(IP+1)
          ENDDO
-         NU = NU - 1
+         NP = NP - 1
         ENDIF
       ENDDO
 C
 C---- pick up here when no more points to be removed
- 30   CONTINUE
-      IF(NU.LT.2) THEN
+ 40   CONTINUE
+      IF(NP.LT.2) THEN
        WRITE(*,*)
        WRITE(*,*) 'Need at least 2 points'
        GO TO 90
       ENDIF
 C
-C
 C---- find which X,Y input point is closest to first-specified point
       ISMOD = 1
       IMOD1 = IFRST(ISMOD)
-      XUI = (X(IMOD1)-XOFF)*XSF
-      YUI = (Y(IMOD1)-YOFF)*YSF
-      DSQMIN = (XUI-XUSP1)**2 + (YUI-YUSP1)**2
+      XUI = X(IMOD1)
+      YUI = Y(IMOD1)
+      DSQMIN = (XUI-XPSP1)**2 + (YUI-YPSP1)**2
       DO IS = 1, NSIDE
         DO I = IFRST(IS), ILAST(IS)
 C-------- convert input arrays to plot coordinates
-          XUI = (X(I)-XOFF)*XSF
-          YUI = (Y(I)-YOFF)*YSF
-          DSQ = (XUI-XUSP1)**2 + (YUI-YUSP1)**2
+          XUI = X(I)
+          YUI = Y(I)
+          DSQ = (XUI-XPSP1)**2 + (YUI-YPSP1)**2
 C
           IF(DSQ .LT. DSQMIN) THEN
 C---------- this point is the closest so far... note its indices
@@ -707,18 +1063,17 @@ C
 C---- set side and function to be modified
       IS = ISMOD
 C
-C
 C---- find which X,Y input point is closest to last-specified point,
 C-    but check only element IS
       IMOD2 = IFRST(IS)
-      XUI = (X(IMOD2)-XOFF)*XSF
-      YUI = (Y(IMOD2)-YOFF)*YSF
-      DSQMIN = (XUI-XUSP2)**2 + (YUI-YUSP2)**2
+      XUI = X(IMOD2)
+      YUI = Y(IMOD2)
+      DSQMIN = (XUI-XPSP2)**2 + (YUI-YPSP2)**2
       DO I = IFRST(IS), ILAST(IS)
 C------ convert input arrays to plot coordinates
-        XUI = (X(I)-XOFF)*XSF
-        YUI = (Y(I)-YOFF)*YSF
-        DSQ = (XUI-XUSP2)**2 + (YUI-YUSP2)**2
+        XUI = X(I)
+        YUI = Y(I)
+        DSQ = (XUI-XPSP2)**2 + (YUI-YPSP2)**2
 C
         IF(DSQ .LT. DSQMIN) THEN
 C-------- this point is the closest so far... note its indices
@@ -727,19 +1082,20 @@ C-------- this point is the closest so far... note its indices
         ENDIF
       ENDDO
 C
-      IF    (IMOD1.EQ.IMOD2) THEN
+C----- Check for finite segment for changes
+      IF(IMOD1.EQ.IMOD2) THEN
        WRITE(*,*)
        WRITE(*,*) 'Graft endpoints must be distinct'
        GO TO 90
       ELSEIF(IMOD1.GT.IMOD2) THEN
 C----- reverse the input-point ordering to get increasing S values
-       DO IU = 1, NU/2
-         XTMP = XU(IU)
-         YTMP = YU(IU)
-         XU(IU) = XU(NU-IU+1)
-         YU(IU) = YU(NU-IU+1)
-         XU(NU-IU+1) = XTMP
-         YU(NU-IU+1) = YTMP
+       DO IP = 1, NP/2
+         XTMP = XP(IP)
+         YTMP = YP(IP)
+         XP(IP) = XP(NP-IP+1)
+         YP(IP) = YP(NP-IP+1)
+         XP(NP-IP+1) = XTMP
+         YP(NP-IP+1) = YTMP
        ENDDO
        ITMP = IMOD1
        IMOD1 = IMOD2
@@ -747,61 +1103,69 @@ C----- reverse the input-point ordering to get increasing S values
       ENDIF
 C
 C---- reset X,Y and dX/dS,dY/dS at first and last points of modified interval
-      IU = 1
+      IP = 1
       IF(LBLEND .OR. IMOD1.NE.IFRST(IS)) THEN
 C----- reset 1st input point to match contour, except if non-blended endpoint
-       XU(IU) = X(IMOD1)
-       YU(IU) = Y(IMOD1)
+       XP(IP) = X(IMOD1)
+       YP(IP) = Y(IMOD1)
       ENDIF
       IF(LBLEND .AND. IMOD1.NE.IFRST(IS)) THEN
 C----- match derivatives to current contour, except at the endpoints
-       XUD1 = XD(IMOD1)
-       YUD1 = YD(IMOD1)
+       XPD1 = XD(IMOD1)
+       YPD1 = YD(IMOD1)
       ELSE
 C----- do not constrain 1st derivatives (set zero 3rd derivative instead)
-       XUD1 = -999.0
-       YUD1 = -999.0
+       XPD1 = -999.0
+       YPD1 = -999.0
       ENDIF
 C
-      IU = NU
+      IP = NP
       IF(LBLEND .OR. IMOD2.NE.ILAST(IS)) THEN
 C----- reset 1st input point to match contour, except if non-blended endpoint
-       XU(IU) = X(IMOD2)
-       YU(IU) = Y(IMOD2)
+       XP(IP) = X(IMOD2)
+       YP(IP) = Y(IMOD2)
       ENDIF
       IF(LBLEND .AND. IMOD2.NE.ILAST(IS)) THEN
 C----- match derivatives to current contour
-       XUD2 = XD(IMOD2)
-       YUD2 = YD(IMOD2)
+       XPD2 = XD(IMOD2)
+       YPD2 = YD(IMOD2)
       ELSE
 C----- do not constrain 1st derivatives (set zero 3rd derivative instead)
-       XUD2 = -999.0
-       YUD2 = -999.0
+       XPD2 = -999.0
+       YPD2 = -999.0
       ENDIF
 C
 C---- set spline parameter
-      CALL SCALC(XU,YU,SU,NU)
+      CALL SCALC(XP,YP,SP,NP)
 C
-C---- shift and rescale spline parameter SU to match current S
-      SU1 = SU(1)
-      SU2 = SU(NU)
-      DO IU = 1, NU
-        SFRAC = (SU(IU)-SU1)/(SU2-SU1)
-        SU(IU) = S(IMOD1)*(1.0-SFRAC) + S(IMOD2)*SFRAC
+C---- shift and rescale spline parameter SP to match current S
+      SP1 = SP(1)
+      SP2 = SP(NP)
+      DO IP = 1, NP
+        SFRAC = (SP(IP)-SP1)/(SP2-SP1)
+        SP(IP) = S(IMOD1)*(1.0-SFRAC) + S(IMOD2)*SFRAC
       ENDDO
 C
 C---- spline input function values
-      CALL SEGSPLD(XU,XUD,SU,NU,XUD1,XUD2)
-      CALL SEGSPLD(YU,YUD,SU,NU,YUD1,YUD2)
+      CALL SEGSPLD(XP,XPD,SP,NP,XPD1,XPD2)
+      CALL SEGSPLD(YP,YPD,SP,NP,YPD1,YPD2)
+C
+C---- replot screen with splined line and points
+      LPLNEW = .TRUE.
+      IF(.NOT.LEXIT) GO TO 5
 C
 C
+C---- Modify input points in user-specified segment
 C---- go over all points on modified segment
-      DO I = IMOD1, IMOD2
+ 60   DO I = IMOD1, IMOD2
         SI = S(I)
-        X(I) = SEVAL(SI,XU,XUD,SU,NU)
-        Y(I) = SEVAL(SI,YU,YUD,SU,NU)
+        X(I) = SEVAL(SI,XP,XPD,SP,NP)
+        Y(I) = SEVAL(SI,YP,YPD,SP,NP)
       ENDDO
 C
+C---- Replot with changes
+ 50   CALL NEWCOLOR(ICOL0)
+      CALL NEWPLOT
       IF(LMODPL) THEN
 C----- plot modified function over modified interval
        CALL NEWCOLORNAME('MAGENTA')

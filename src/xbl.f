@@ -74,7 +74,6 @@ C
       REYBL_RE =         SQRT(HERAT**3) * (1.0+HVRAT)/(HERAT+HVRAT)
       REYBL_MS = REYBL * (1.5/HERAT - 1.0/(HERAT+HVRAT))*HERAT_MS
 C
-      AMCRIT = ACRIT
       IDAMPV = IDAMP
 C
 C---- save TE thickness
@@ -135,6 +134,9 @@ C
       ULE1_A = UINV_A(2,1)
       ULE2_A = UINV_A(2,2)
 C
+      TINDEX(1) = 0.0
+      TINDEX(2) = 0.0
+C
 C**** Go over each boundary layer/wake
       DO 2000 IS=1, 2
 C
@@ -155,6 +157,8 @@ C
 C---- similarity station pressure gradient parameter  x/u du/dx
       IBL = 2
       BULE = 1.0
+C
+      AMCRIT = ACRIT(IS)
 C
 C---- set forced transition arc length position
       CALL XIFSET(IS)
@@ -481,6 +485,14 @@ C
       DUE1 = DUE2
       DDS1 = DDS2
 C      
+      IF(IBL .EQ. ITRAN(IS) .AND. X2 .GT. X1) THEN
+       IF(IS.EQ.1) THEN
+        TINDEX(IS) = FLOAT(IST-ITRAN(IS)+3) - (XT-X1)/(X2-X1)
+       ELSE
+        TINDEX(IS) = FLOAT(IST+ITRAN(IS)-2) + (XT-X1)/(X2-X1)
+       ENDIF
+      ENDIF
+C
 C---- set BL variables for next station
       DO 190 ICOM=1, NCOM
         COM1(ICOM) = COM2(ICOM)
@@ -544,9 +556,11 @@ C---- shape parameters for separation criteria
       HLMAX = 3.8
       HTMAX = 2.5
 C
-      DO 2000 IS=1, 2
+      DO 2000 IS = 1, 2
 C
       WRITE(*,*) '   side ', IS, ' ...'
+C
+      AMCRIT = ACRIT(IS)
 C
 C---- set forced transition arc length position
       CALL XIFSET(IS)
@@ -632,6 +646,7 @@ C
            CALL BLSYS
           ENDIF
 C
+
           IF(DIRECT) THEN
 C
 C--------- try direct mode (set dUe = 0 in currently empty 4th line)
@@ -879,7 +894,9 @@ C---- constant controlling how far Hk is allowed to deviate
 C-    from the specified value.
       SENSWT = 1000.0
 C
-      DO 2000 IS=1, 2
+      DO 2000 IS = 1, 2
+C
+      AMCRIT = ACRIT(IS)
 C
 C---- set forced transition arc length position
       CALL XIFSET(IS)

@@ -158,13 +158,23 @@ C-------- find last H index at this R,w
           GO TO 401
  4022     IHP2 = IHP
 C
+
           DO IC = 1, 2
             DO IHP=IHP1, IHP2
               ATMP(IHP) = AC(IRP,IWP,IHP,IC)
             ENDDO
 C
             IHPNUM = IHP2 - IHP1 + 1
-            CALL SPLINE(ATMP(IHP1),ADTMP(IHP1),HHL(IHP1),IHPNUM)
+
+c           if(ihpnum.le.1) then
+c             write(*,*) irp, iwp, ihp1, ihp2
+c             write(*,*) rtl(irp,ihp), wsl(iwp,ihp), hhl(ihp)
+c            stop
+c           endif
+
+            IF(IHPNUM .GT. 1) THEN
+             CALL SPLINE(ATMP(IHP1),ADTMP(IHP1),HHL(IHP1),IHPNUM)
+            ENDIF
 C
             DO IHP=IHP1, IHP2
               AC_H(IRP,IWP,IHP,IC) = ADTMP(IHP)

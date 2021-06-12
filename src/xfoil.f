@@ -34,7 +34,7 @@ C
 C---- max panel angle threshold for warning
       DATA ANGTOL / 40.0 /
 C
-      VERSION = 6.97
+      VERSION = 6.99
       WRITE(*,1005) VERSION
  1005 FORMAT(
      &  /' ==================================================='
@@ -131,7 +131,8 @@ C===============================================
        WRITE(*,1100) XCMREF, YCMREF, NPAN
 C
 C===============================================
-      ELSEIF(COMAND.EQ.'QUIT') THEN
+      ELSEIF(COMAND.EQ.'QUIT' .OR.
+     &       COMAND.EQ.'Q   '      ) THEN
        CALL PLCLOSE
        STOP
 C
@@ -264,7 +265,7 @@ C===============================================
       ELSEIF(COMAND.EQ.'BEND') THEN
         IF(N.EQ.0) THEN
          WRITE(*,*)
-         WRITE(*,*) ' No airfoil available'
+         WRITE(*,*) '***  No airfoil available  ***'
          GO TO 500
         ENDIF
 C
@@ -274,7 +275,7 @@ C===============================================
       ELSEIF(COMAND.EQ.'BENP') THEN
         IF(N.EQ.0) THEN
          WRITE(*,*)
-         WRITE(*,*) ' No airfoil available'
+         WRITE(*,*) '***  No airfoil available  ***'
          GO TO 500
         ENDIF
 C
@@ -302,7 +303,7 @@ C===============================================
        CALL OPLSET(IDEV,IDEVRP,IPSLU,
      &             SIZE,PLOTAR,
      &             XMARG,YMARG,XPAGE,YPAGE,
-     &             CH,SCRNFR,LCURS,LLAND)
+     &             CH,SCRNFR,LCURS,LLAND,ICOLS)
 C
 C===============================================
       ELSEIF(COMAND.EQ.'WDEF') THEN
@@ -510,6 +511,9 @@ C
 C---- no grid on Cp plots
       LCPGRD = .FALSE.
 C
+C---- overlay inviscid Cp on viscous Cp(x) plot
+      LCPINV = .TRUE.
+
 C---- grid and no symbols are to be used on BL variable plots
       LBLGRD = .TRUE.
       LBLSYM = .FALSE.
@@ -571,8 +575,8 @@ C---- Ue limits in  Ue vs x  plot
       UFAC = PLOTAR/(UEMAX-UEMIN)
 C
 C---- DCp limits in CAMB loading plot
-      YPMIN = -0.6
-      YPMAX =  0.6
+      YPMIN = -0.4
+      YPMAX =  0.4
 C
 C---- scaling factor for Cp vector plot
       VFAC = 0.25
@@ -658,7 +662,8 @@ C---- polar variables to be written to polar save file
       NIPOL0 = 5
 C
       JPOL(1) = JTN
-      NJPOL = 1
+      JPOL(2) = JTI
+      NJPOL = 2
 C
 C---- default Cm reference location
       XCMREF = 0.25
@@ -667,7 +672,8 @@ C
 C---- default viscous parameters
       RETYP = 1
       REINF1 = 0.
-      ACRIT = 9.0
+      ACRIT(1) = 9.0
+      ACRIT(2) = 9.0
       XSTRIP(1) = 1.0
       XSTRIP(2) = 1.0
       XOCTR(1) = 1.0
@@ -677,6 +683,10 @@ C---- default viscous parameters
       WAKLEN = 1.0
 C
       IDAMP = 0
+C
+C---- select default BL plotting coordinate (can be changed in VPLO)
+      IXBLP = 1   !  x
+ccc   IXBLP = 2   !  s
 C
 C---- set BL calibration parameters
       CALL BLPINI
@@ -701,14 +711,14 @@ C---- default filename prefix
 C
 C---- Plotting flag
       IDEV = 1   ! X11 window only
-c     IDEV = 2   ! B&W PostScript output file only (no color)
+c     IDEV = 2                  ! B&W PostScript output file only (no color)
 c     IDEV = 3   ! both X11 and B&W PostScript file
 c     IDEV = 4   ! Color PostScript output file only 
 c     IDEV = 5   ! both X11 and Color PostScript file 
 C
 C---- Re-plotting flag (for hardcopy)
-      IDEVRP = 2   ! B&W PostScript
-c     IDEVRP = 4   ! Color PostScript
+c     IDEVRP = 2   ! B&W PostScript
+      IDEVRP = 4   ! Color PostScript
 C
 C---- PostScript output logical unit and file specification
       IPSLU = 0  ! output to file  plot.ps   on LU 4    (default case)
@@ -922,7 +932,7 @@ C---- polar plot CL,CD,alpha,CM  min,max,delta
 C
 C---- default Mach and viscous parameters
       READ(LU,*,ERR=80) MATYP, MINF1, VACCEL
-      READ(LU,*,ERR=80) RETYP, RMILL, ACRIT
+      READ(LU,*,ERR=80) RETYP, RMILL, ACRIT(1), ACRIT(2)
       READ(LU,*,ERR=80) XSTRIP(1), XSTRIP(2)
 C
       IF(     LCOLOR) IDEVRP = 4
@@ -994,7 +1004,7 @@ C---- polar plot CL,CD,alpha,CM  min,max,delta
 C
 C---- default viscous parameters
       WRITE(LU,1071) MATYP  , MINF1        , VACCEL
-      WRITE(LU,1072) RETYP  , REINF1/1.0E6 , ACRIT
+      WRITE(LU,1072) RETYP  , REINF1/1.0E6 , ACRIT(1), ACRIT(2)
       WRITE(LU,1080) XSTRIP(1), XSTRIP(2)
 C
       RETURN
@@ -1011,7 +1021,7 @@ C...............................................
  1063 FORMAT(1X,F9.4 ,F9.4,F9.4, 9X ,' | ALmin   ALmax   ALdel'        )
  1064 FORMAT(1X,F9.4 ,F9.4,F9.4, 9X ,' | CMmin   CMmax   CMdel'        )
  1071 FORMAT(1X,I3,6X,F9.4,F9.4, 9X ,' | MAtype  Mach    Vaccel'       )
- 1072 FORMAT(1X,I3,6X,F9.4,F9.4, 9X ,' | REtype  Re/10^6 Ncrit'        )
+ 1072 FORMAT(1X,I3,6X,F9.4,F9.4,F9.4,' | REtype  Re/10^6 Ncrit1 Ncrit2')
  1080 FORMAT(1X,F9.4 ,F9.4, 9X , 9X ,' | XtripT  XtripB'               )
       END ! WRTDEF
 
@@ -1275,7 +1285,7 @@ C
      &              XBTE,YBTE
 C
 C---- set reasonable MSES domain parameters for non-MSES coordinate file
-      IF(ITYPE.LE.2) THEN
+      IF(ITYPE.LE.2 .AND. ISPARS.EQ.' ') THEN
         XBLE = SEVAL(SBLE,XB,XBP,SB,NB)
         YBLE = SEVAL(SBLE,YB,YBP,SB,NB)
         XINL = XBLE - 2.0*CHORDB
@@ -2150,7 +2160,8 @@ C
      & /'  XT rr  Top    side refined area x/c limits   ' , 2F6.3
      & /'  XB rr  Bottom side refined area x/c limits   ' , 2F6.3
      & /'  Z oom'
-     & /'  U nzoom' )
+     & /'  U nzoom'
+     & /'  H ardcopy' )
 C
    12 CALL ASKC('Change what ? (<cr> if nothing else)^',VAR,COMARG)
 C
@@ -2166,6 +2177,12 @@ C
         GO TO 12
       ENDIF
 C
+      IF(VAR.EQ.'H   ') THEN
+       IF(LPLOT) CALL PLEND
+       LPLOT = .FALSE.
+       CALL REPLOT(IDEVRP)
+       GO TO 12
+      ENDIF
 C
       DO I=1, 20
         IINPUT(I) = 0
@@ -2388,7 +2405,7 @@ C
           GO TO 90
          ELSE
           NINT(K) = NXYPOL(IP)
-          DO I = 1, N
+          DO I = 1, NINT(K)
             XINT(I,K) = CPOLXY(I,1,IP)
             YINT(I,K) = CPOLXY(I,2,IP)
           ENDDO

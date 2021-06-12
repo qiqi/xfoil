@@ -1,5 +1,10 @@
       PROGRAM MAPPL1
-C
+C-----------------------------------------------------
+C     Plots spatial-stability function contours
+C     for one shape parameter H value.
+C       alpha_i(w,Re ; H)
+C       alpha_r(w,Re ; H)
+C-----------------------------------------------------
       PARAMETER (NMAX=257,NRX=111,NWX=91)
       REAL ETA(NMAX), U(NMAX), S(NMAX)
 C
@@ -26,12 +31,18 @@ C
       SIZE = 4.0
       CH = 0.020
       CHL = 0.018
+      CHX = CH*1.7
 C
       CALL PLINITIALIZE
 C
 C
       CALL GETARG0(1,ARGP1)
       CALL GETARG0(2,ARGP2)
+
+      IF(ARGP1 .EQ. ' ') THEN
+       WRITE(*,*) 'Usage:  % mappl1  OSmapfile  [ cntrparfile ]'
+       STOP
+      ENDIF
 C
 C---- set expeced format of source files
       IFORM = -1 !  unknown
@@ -147,13 +158,15 @@ C
       XLAB = (FLOAT((I1+I2)/2) + 0.5 - RTLMIN) * SF - 1.0*CH
       YLAB = (FLOAT( J1      )       - WRLMIN) * SF - 3.7*CH
       CALL PLCHAR(XLAB       ,YLAB       ,1.7*CH,'R',0.0,1)
-      CALL PLMATH(XLAB+1.7*CH,YLAB-0.6*CH,1.2*CH,'q',0.0,1)
+      CALL PLCHAR(XLAB+1.3*CH,YLAB       ,1.4*CH,'e',0.0,1)
+      CALL PLMATH(XLAB+2.6*CH,YLAB-0.6*CH,1.2*CH,'q',0.0,1)
 C
       CALL NEWPEN(3)
-      XLAB = (FLOAT( I1      )       - RTLMIN) * SF - 7.2*CH
+      XLAB = (FLOAT( I1      )       - RTLMIN) * SF - 8.2*CH
       YLAB = (FLOAT((J1+J2)/2) + 0.5 - WRLMIN) * SF - 0.9*CH
       CALL PLMATH(XLAB,YLAB,1.7*CH,'wq'  ,0.0,2)
-      CALL PLCHAR(XLAB,YLAB,1.7*CH,'  /U',0.0,4)
+      CALL PLCHAR(XLAB,YLAB,1.7*CH,'  /u',0.0,4)
+      CALL PLCHAR(XLAB+6.7*CH,YLAB-0.5*CH,1.2*CH,'e',0.0,1)
 C
       CALL NEWPEN(3)
       XLAB = 0.5*CH

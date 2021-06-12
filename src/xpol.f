@@ -45,7 +45,7 @@ C
        ENDIF
        CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &              NAX, 1,NAPOL(IP), CPOL(1,1,IP),IPOL,NIPOL,
-     &              REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &              REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &              PTRATP(IP),ETAPP(IP),
      &              NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &              ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -92,7 +92,9 @@ C
 C
        MINF1 = MACHP1(IP)
        REINF1 = REYNP1(IP)
-       ACRIT = ACRITP(IP)
+C
+       ACRIT(1) = ACRITP(1,IP)
+       ACRIT(2) = ACRITP(2,IP)
 C
        XSTRIP(1) = XSTRIPP(1,IP)
        XSTRIP(2) = XSTRIPP(2,IP)
@@ -113,7 +115,9 @@ C
         REYNP1(IP) = 0.
        ENDIF
        MACHP1(IP) = MINF1
-       ACRITP(IP) = ACRIT
+C
+       ACRITP(1,IP) = ACRIT(1)
+       ACRITP(2,IP) = ACRIT(2)
 C
        XSTRIPP(1,IP) = XSTRIP(1)
        XSTRIPP(2,IP) = XSTRIP(2)
@@ -135,12 +139,14 @@ C
       SUBROUTINE APCOPY(IP)
       INCLUDE 'XFOIL.INC'
 C
+      NOLD = N
+
       N = NXYPOL(IP)
       DO I = 1, N
         X(I) = CPOLXY(I,1,IP)
         Y(I) = CPOLXY(I,2,IP)
       ENDDO
-      NAME = NAMEPOL(IP)         !  new  MD   30 Oct 02
+      NAME = NAMEPOL(IP)
 C
       CALL SCALC(X,Y,S,N)
       CALL SEGSPL(X,XP,S,N)
@@ -164,7 +170,7 @@ C
       LIPAN = .FALSE.
       LVCONV = .FALSE.
       LSCINI = .FALSE.
-CC      LBLINI = .FALSE.
+      IF(NOLD.NE.N) LBLINI = .FALSE.
 C
       RETURN
       END ! APCOPY
@@ -226,7 +232,7 @@ C---- try reading the polar file to see if it exists
       OPEN(LU,FILE=FNAME,STATUS='OLD',ERR=60)
       CALL POLREAD(LU,' ',ERROR,
      &             NAX,NAPOL(IP),CPOL(1,1,IP), 
-     &             REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &             REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &             PTRATP(IP),ETAPP(IP),
      &             NAMEPOL(IP),IRETYP(IP),IMATYP(IP),
      &             ISX,NBLP(1,IP),CPOLSD(1,1,1,IP),
@@ -253,7 +259,8 @@ C---- check if the polar save file is for the same airfoil and conditions
      &   MACHP1(IP) .NE. MINF1    .OR.
      &   IRETYP(IP) .NE. RETYP    .OR.
      &   IMATYP(IP) .NE. MATYP    .OR.
-     &   ACRITP(IP) .NE. ACRIT    .OR.
+     &   ACRITP(1,IP) .NE. ACRIT(1)    .OR.
+     &   ACRITP(2,IP) .NE. ACRIT(2)    .OR.
      &   XSTRIPP(1,IP) .NE. XSTRIP(1)  .OR.
      &   XSTRIPP(2,IP) .NE. XSTRIP(2)       ) THEN
 C
@@ -262,21 +269,23 @@ C
      &                MINF1,    MACHP1(IP)   ,
      &                RETYP,    IRETYP(IP)   ,
      &                MATYP,    IMATYP(IP)   ,
-     &                ACRIT,    ACRITP(IP)   ,
+     &                ACRIT(1), ACRITP(1,IP) ,
+     &                ACRIT(2), ACRITP(2,IP) ,
      &                XSTRIP(1),XSTRIPP(1,IP),
      &                XSTRIP(2),XSTRIPP(2,IP)
 C
  6600  FORMAT(
-     & /'              Current                         Save file'
-     & /'          ------------------              ------------------'
-     & /' name :   ', A    ,      A
-     & /' Re   :   ', F12.0, 20X, F12.0
-     & /' Mach :   ', F12.4, 20X, F12.4
-     & /' Retyp:   ', I7   , 25X, I7
-     & /' Matyp:   ', I7   , 25X, I7
-     & /' Ncrit:   ', F12.4, 20X, F12.4
-     & /' xtr T:   ', F12.4, 20X, F12.4
-     & /' xtr B:   ', F12.4, 20X, F12.4 )
+     & /'               Current                         Save file'
+     & /'           ------------------              ------------------'
+     & /' name  :   ', A    ,      A
+     & /' Re    :   ', F12.0, 20X, F12.0
+     & /' Mach  :   ', F12.4, 20X, F12.4
+     & /' Retyp :   ', I7   , 25X, I7
+     & /' Matyp :   ', I7   , 25X, I7
+     & /' NcritT:   ', F12.4, 20X, F12.4
+     & /' NcritB:   ', F12.4, 20X, F12.4
+     & /' xtr T :   ', F12.4, 20X, F12.4
+     & /' xtr B :   ', F12.4, 20X, F12.4 )
 C
        WRITE(*,*)
        WRITE(*,*)
@@ -291,7 +300,8 @@ C
         MINF1   = MACHP1(IP)
         RETYP   = IRETYP(IP)
         MATYP   = IMATYP(IP)
-        ACRIT   = ACRITP(IP)
+        ACRIT(1) = ACRITP(1,IP)
+        ACRIT(2) = ACRITP(2,IP)
         XSTRIP(1) = XSTRIPP(1,IP)
         XSTRIP(2) = XSTRIPP(2,IP)
        ELSE
@@ -306,7 +316,7 @@ C---- display polar save file just read in
       WRITE(*,*) 'Old polar save file read in ...'
       CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &             NAX, 1,NAPOL(IP), CPOL(1,1,IP), IPOL,NIPOL,
-     &             REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &             REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &             PTRATP(IP),ETAPP(IP),
      &             NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &             ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -336,7 +346,7 @@ C
       IA2 = -1
       CALL POLWRIT(LU,' ',ERROR, .TRUE.,
      &             NAX, IA1,IA2, CPOL(1,1,IP), IPOL,NIPOL,
-     &             REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &             REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &             PTRATP(IP),ETAPP(IP),
      &             NAMEPOL(IP),IRETYP(IP),IMATYP(IP),
      &             ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -386,6 +396,7 @@ C--------------------------------------------------------------
 C
       CHARACTER*32 NAMEX
       REAL MACHX
+      REAL ACRITX(ISX)
       INTEGER RETYPX, MATYPX
       LOGICAL NAMDIF
 C
@@ -421,7 +432,7 @@ C---- try reading the unformatted polar dump file to see if it exists
       READ(LU,ERR=90,END=60) NAMEX
 C
 C---- if we got to here, it exists, so read the header
-      READ(LU) MACHX, REYNX, ACRITX
+      READ(LU) MACHX, REYNX, ACRITX(1), ACRITX(2)
       READ(LU) MATYPX, RETYPX
       READ(LU) IIX, ILEX, ITEX, IIBX
 C
@@ -447,29 +458,32 @@ C---- check to see if the names are different
       ENDIF
 C
 C---- check if the polar save file is for the same airfoil and conditions
-      IF(NAMDIF                    .OR.
+      IF(NAMDIF               .OR.
      &   REYNX  .NE. REINF1   .OR.
      &   MACHX  .NE. MINF1    .OR.
-     &   ACRITX .NE. ACRIT    .OR.
      &   RETYPX .NE. RETYP    .OR.
-     &   MATYPX .NE. MATYP        ) THEN
+     &   MATYPX .NE. MATYP    .OR.
+     &   ACRITX(1) .NE. ACRIT(1) .OR.
+     &   ACRITX(2) .NE. ACRIT(2)     ) THEN
 C
        WRITE(*,6600) NAMEX  , NAME,
      &               REYNX  , REINF1,
      &               MACHX  , MINF1,
      &               RETYPX , RETYP,
      &               MATYPX , MATYP,
-     &               ACRITX , ACRIT
+     &               ACRITX(1), ACRIT(1),
+     &               ACRITX(1), ACRIT(2)
 C
  6600  FORMAT(
-     & /'              Dump file                       Current'
-     & /'            ------------                    ------------'
-     & /' name :   ', A    ,      A
-     & /' Re   :   ', F12.0, 20X, F12.0
-     & /' Mach :   ', F12.4, 20X, F12.4
-     & /' Retyp:   ', I7   , 25X, I7
-     & /' Matyp:   ', I7   , 25X, I7
-     & /' Ncrit:   ', F12.4, 20X, F12.4 )
+     & /'               Dump file                       Current'
+     & /'             ------------                    ------------'
+     & /' name  :   ', A    ,      A
+     & /' Re    :   ', F12.0, 20X, F12.0
+     & /' Mach  :   ', F12.4, 20X, F12.4
+     & /' Retyp :   ', I7   , 25X, I7
+     & /' Matyp :   ', I7   , 25X, I7
+     & /' NcritT:   ', F12.4, 20X, F12.4
+     & /' NcritB:   ', F12.4, 20X, F12.4 )
 C
        WRITE(*,*)
        WRITE(*,*)
@@ -482,9 +496,10 @@ C
         NNAME  = NNAMEX
         MINF1  = MACHX
         REINF1 = REYNX
-        ACRIT  = ACRITX
         RETYP  = RETYPX
         MATYP  = MATYPX
+        ACRIT(1) = ACRITX(1)
+        ACRIT(2) = ACRITX(2)
        ELSE
         WRITE(*,*)
         WRITE(*,*) 'Old polar dump file NOT available for appending'
@@ -502,7 +517,7 @@ C
 C---- the polar dump file doesn't exist, so write new header
    60 CONTINUE
       WRITE(LU) NAME, 'XFOIL   ', VERSION
-      WRITE(LU) MINF1, REINF1/1.0E6, ACRIT
+      WRITE(LU) MINF1, REINF1/1.0E6, ACRIT(1), ACRIT(2)
       WRITE(LU) MATYP, RETYP
       WRITE(LU) 0, 0, 0, N
       WRITE(LU) (X(I), Y(I), I=1, N)
@@ -570,15 +585,16 @@ C
         CPOL(IA,ICV,IP) = CDV
         CPOL(IA,IMA,IP) = MINF
         CPOL(IA,IRE,IP) = RE
-        CPOL(IA,INC,IP) = ACRIT
         DO IS = 1, 2
           IF(LVISC) THEN
            XOCT = XOCTR(IS)
           ELSE
            XOCT = 0.
           ENDIF
+          CPOLSD(IA,IS,JNC,IP) = ACRIT(IS)
           CPOLSD(IA,IS,JTP,IP) = XSTRIP(IS)
           CPOLSD(IA,IS,JTN,IP) = XOCT
+          CPOLSD(IA,IS,JTI,IP) = TINDEX(IS)
         ENDDO
 C
         IF(LFLAP) THEN
@@ -611,7 +627,7 @@ C
        IA = NAPOL(IP)
        CALL POLWRIT(LU,' ',ERROR, .FALSE.,
      &              NAX, IA,IA, CPOL(1,1,IP), IPOL,NIPOL,
-     &              REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &              REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &              PTRATP(IP),ETAPP(IP),
      &              NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &              ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -750,12 +766,12 @@ C
       WRITE(*,*)
       WRITE(*,1100)
      & '       airfoil                    Re           Mach     ',
-     & '  Ncrit  XtripT  XtripB     file'
+     & '  NcritT  NcritB  XtripT  XtripB       file'
       WRITE(*,1100)
      & '      ------------------------  ------------  ----------',
-     & '  -----  ------  ------    -------------------'
-CCC     > 10  NACA 0012 (mod)           1.232e6/sqCL  0.781/sqCL
-CCC        9.00   1.000   1.000
+     & '  ------  ------  ------  ------    -------------------'
+CCC     >  10  NACA 0012 (mod)           1.232e6/sqCL  0.781/sqCL
+CCC         9.00    9.00   1.000   1.000
 CCC     1234567890123456789012345678901234567890123456789012345678901234567890
 C
       DO IP = IP1, IP2
@@ -785,10 +801,11 @@ C
         CALL STRIP(PFNAME(IP),NPF)
         WRITE(*,1200) CACC, IP, NAMEPOL(IP), 
      &                RMAN, IEXP, CLTYP(IRET), MACHP1(IP), CLTYP(IMAT),
-     &                ACRITP(IP), XSTRIPP(1,IP), XSTRIPP(2,IP),
+     &                ACRITP(1,IP), ACRITP(2,IP),
+     &                XSTRIPP(1,IP), XSTRIPP(2,IP),
      &                CFIL,PFNAME(IP)(1:NPF)
  1200   FORMAT(1X,A1,I3,2X, A24, F7.3,'e',I1,A5, F7.3,A5, 
-     &            F7.2, 2F8.3, 2X, A1, 1X, A)
+     &            2F8.2, 2F8.3, 2X, A1, 1X, A)
       ENDDO
 C
       RETURN
@@ -832,10 +849,12 @@ C
 C
       MACHP1(IP2) = MACHP1(IP1)
       REYNP1(IP2) = REYNP1(IP1)
-      ACRITP(IP2) = ACRITP(IP1)
 C
       IMATYP(IP2) = IMATYP(IP1)
       IRETYP(IP2) = IRETYP(IP1)
+
+      ACRITP(1,IP2) = ACRITP(1,IP1)
+      ACRITP(2,IP2) = ACRITP(2,IP1)
 C
       XSTRIPP(1,IP2) = XSTRIPP(1,IP1)
       XSTRIPP(2,IP2) = XSTRIPP(2,IP1)

@@ -146,7 +146,7 @@ C
         LU = 9
         CALL POLREAD(LU,FNPOL(IP),ERROR,
      &    NAX,NA(IP),CPOL(1,1,IP), 
-     &    REYN(IP),MACH(IP),ACRIT(IP),XTRIP(1,IP),
+     &    REYN(IP),MACH(IP),ACRIT(1,IP),XTRIP(1,IP),
      &    PTRAT(IP),ETAP(IP),
      &    NAME(IP),IRETYP(IP),IMATYP(IP),
      &    ISX,NBL(IP),CPOLSD(1,1,1,IP),
@@ -163,7 +163,11 @@ C
         IF(IRETYP(IP).EQ.1) WRITE(*,8021) REYN(IP)/1.0E6 
         IF(IRETYP(IP).EQ.2) WRITE(*,8022) REYN(IP)/1.0E6
         IF(IRETYP(IP).EQ.3) WRITE(*,8023) REYN(IP)/1.0E6
-        WRITE(*,8030) ACRIT(IP)
+        IF(ACRIT(1,IP).EQ.ACRIT(2,IP)) THEN
+         WRITE(*,8030) ACRIT(1,IP)
+        ELSE
+         WRITE(*,8030) ACRIT(1,IP), ACRIT(2,IP)
+        ENDIF
         IF(PTRAT(IP).NE.0.0) THEN
          WRITE(*,8040) PTRAT(IP)
          WRITE(*,8041) ETAP(IP)
@@ -176,7 +180,7 @@ C
  8021   FORMAT('             Re =', F7.3,' e 6',$)
  8022   FORMAT('    sqrt(CL)*Re =', F7.3,' e 6',$)
  8023   FORMAT('          CL*Re =', F7.3,' e 6',$)
- 8030   FORMAT('          Ncrit =', F6.2         )
+ 8030   FORMAT('          Ncrit =', 10F6.2       )
  8040   FORMAT('          pi_p  =', F8.4,       $)
  8041   FORMAT('          eta_p =', F8.4         )
 C
@@ -242,15 +246,17 @@ C
 C
         NDAT = ID
 C
-        CALL STRIP(LABREF(ID),NLAB)
-        IF(NLAB.EQ.0) THEN
-          CALL ASKS('Enter label for reference data^',LABREF(ID))
-          CALL STRIP(LABREF(ID),NLAB)
+        IF(LGETFN) THEN
+         CALL STRIP(LABREF(ID),NLAB)
+         IF(NLAB.EQ.0) THEN
+           CALL ASKS('Enter label for reference data^',LABREF(ID))
+           CALL STRIP(LABREF(ID),NLAB)
+         ENDIF
         ENDIF
 C
 ccc     IFCOL(ID) = NCOLOR - ID + 1
-        IFCOL(ID) = 2 + ID
-        IFSYM(ID) = MOD(ID,10)
+c       IFCOL(ID) = 2 + ID
+c       IFSYM(ID) = MOD(ID,10)
  25   CONTINUE
  27   CONTINUE
       GO TO 5
@@ -439,7 +445,7 @@ C---- set 0.3" left,bottom margins
       CALL NEWFACTOR(SIZE)
       CALL PLOT(6.0*CH,6.0*CH,-3)
 C
-      CALL VEPPLT(NAX,NPOL,NA,VPOLO,
+      CALL VEPPLT(NAX,NPOL,NA,VPOLO, ISX,NBL,
      &            REYN,MACH,ACRIT,PTRAT,ETAP,
      &            NAME ,ICOL,ILIN,
      &            IMATYP,IRETYP,
@@ -589,7 +595,7 @@ C     9  violet
 C    10  magenta
 C
       DO IP=1, NPX
-ccc       ILIN(IP) = 1 + MOD(IP-1,8
+ccc       ILIN(IP) = 1 + MOD(IP-1,8)
 ccc       ICOL(IP) = 3 + MOD(IP-1,8)
 C
 C------ normally solid, going to dashed after IP=7
@@ -599,11 +605,21 @@ C------ skip yellow (hard to see on white background)
         ICOL(IP) = 3 + MOD(IP-1,7)
         IF(ICOL(IP) .GE. 5) ICOL(IP) = ICOL(IP) + 1
       ENDDO
+
+      DO ID=1, NDX
+ccc        IFCOL(ID) = 3 + MOD(ID-1,8)
+        IFSYM(ID) = MOD(ID-1,14)
+
+C------ skip yellow (hard to see on white background)
+        IFCOL(ID) = 3 + MOD(ID-1,7)
+        IF(IFCOL(ID) .GE. 5) IFCOL(ID) = IFCOL(ID) + 1
+      ENDDO
 C
       LGRID = .TRUE.
       LCDW  = .FALSE.
       LLIST = .TRUE.
       LEGND = .TRUE.
+      LCLIP = .FALSE.
       LCLEN = .FALSE.
       LAECEN = .FALSE.
       LCDH = .FALSE.
@@ -730,6 +746,18 @@ C
       IF(KBAR.LE.0) KBAR = LEN(LINE)
       READ(LINE(1:KBAR),*,ERR=90,END=80) (ILIN(IP), IP=1, NPX)
 C
+C
+      READ(LU,1000,ERR=90,END=80) LINE
+      KBAR = INDEX(LINE,'|') - 1
+      IF(KBAR.LE.0) KBAR = LEN(LINE)
+      READ(LINE(1:KBAR),*,ERR=90,END=80) (IFCOL(ID), ID=1, NDX)
+C
+      READ(LU,1000,ERR=90,END=80) LINE
+      KBAR = INDEX(LINE,'|') - 1
+      IF(KBAR.LE.0) KBAR = LEN(LINE)
+      READ(LINE(1:KBAR),*,ERR=90,END=80) (IFSYM(ID), ID=1, NDX)
+C
+C
       READ(LU,*,ERR=90,END=80) (VPOLPLF(K,1), K=1, 3)
       READ(LU,*,ERR=90,END=80) (VPOLPLF(K,2), K=1, 3)
 C
@@ -791,21 +819,35 @@ C
       WRITE(LINE,1300) (DXMREF(IP), IP=1, NPX)
  1300 FORMAT(1X,80(F7.3))
       CALL STRIP(LINE,NLINE)
-      LINE = LINE(1:NLINE) // ' | dXmom_ref'
+      LINE = ' ' // LINE(1:NLINE) // ' | dXmom_ref'
       CALL STRIP(LINE,NLINE)
       WRITE(LU,1000) LINE(1:NLINE)
 C
       WRITE(LINE,1400) (ICOL(IP), IP=1, NPX)
       CALL STRIP(LINE,NLINE)
-      LINE = LINE(1:NLINE) // ' | line_color'
+      LINE = ' ' // LINE(1:NLINE) // ' | line_color'
       CALL STRIP(LINE,NLINE)
       WRITE(LU,1000) LINE(1:NLINE)
 C
       WRITE(LINE,1400) (ILIN(IP), IP=1, NPX)
       CALL STRIP(LINE,NLINE)
-      LINE = LINE(1:NLINE) // ' | line_type'
+      LINE = ' ' // LINE(1:NLINE) // ' | line_type'
       CALL STRIP(LINE,NLINE)
       WRITE(LU,1000) LINE(1:NLINE)
+C
+C
+      WRITE(LINE,1400) (IFCOL(ID), ID=1, NDX)
+      CALL STRIP(LINE,NLINE)
+      LINE = ' ' // LINE(1:NLINE) // ' | data_point_color'
+      CALL STRIP(LINE,NLINE)
+      WRITE(LU,1000) LINE(1:NLINE)
+C
+      WRITE(LINE,1400) (IFSYM(ID), ID=1, NDX)
+      CALL STRIP(LINE,NLINE)
+      LINE = ' ' // LINE(1:NLINE) // ' | data_point_type'
+      CALL STRIP(LINE,NLINE)
+      WRITE(LU,1000) LINE(1:NLINE)
+C
 C
  1400 FORMAT(1X,80I4)
 C
@@ -832,7 +874,16 @@ C
       LCOLH = IDEVRP .EQ. 4
 C
       WRITE(*,1000)
-     &  LAUTO, LCDW, LLIST, LEGND, LAECEN, LCMDOT, LCDH, LGRID, LCOLH
+     &    LAUTO,
+     &    LCDW,
+     &    LLIST,
+     &    LEGND,
+     &    LAECEN,
+     &    LCMDOT,
+     &    LCDH,
+     &    LGRID,
+     &    LCLIP,
+     &    LCOLH
 C
  1000 FORMAT(/ '  1   Change CL scaling'
      &       / '  2   Change CD scaling'
@@ -848,15 +899,18 @@ C
      &       / ' 14',L3,' plot aero. center?'
      &       / ' 15',L3,' plot streamtube mass coeff.?'
      &       / ' 16',L3,' plot streamtube thrust?'
-     &       / ' 18',L3,' plot grid overlay?'
+     &       / ' 17',L3,' plot grid overlay?'
+     &       / ' 18',L3,' clip to plot boundaries?'
      &       / ' 19',L3,' color hardcopy?'
      &      // ' 20   Rescale forces by chord factor'
      &       / ' 21   Change reference-length unit'
      &       / ' 22   Change moment-reference x/c'
-     &       / ' 23   Change polar colors'
+     &       / ' 23   Change polar line colors'
      &       / ' 24   Change polar line styles'
-     &      // ' 26   Change V  scaling'
-     &       / ' 27   Change Vz scaling'
+     &       / ' 25   Change data point colors'
+     &       / ' 26   Change data point shapes'
+     &      // ' 27   Change V  scaling'
+     &       / ' 28   Change Vz scaling'
      &      // ' 30   Read  settings from defaults file'
      &       / ' 31   Write settings to   defaults file'
      &      // '    Select option:  ',$)
@@ -957,8 +1011,11 @@ C
       ELSE IF(OPTION.EQ.'16') THEN
         LCDH = .NOT. LCDH
 C
-      ELSE IF(OPTION.EQ.'18') THEN
+      ELSE IF(OPTION.EQ.'17') THEN
         LGRID = .NOT. LGRID
+C
+      ELSE IF(OPTION.EQ.'18') THEN
+        LCLIP = .NOT. LCLIP
 C
       ELSE IF(OPTION.EQ.'19') THEN
 C--- Color hardcopy toggle
@@ -1055,7 +1112,62 @@ C
          IF(ERROR) GO TO 830
         ENDIF
 C
+      ELSE IF(OPTION.EQ.'25') THEN
+C------ change data colors
+        IF(NDAT.EQ.0) THEN
+         WRITE(*,*) 'No current data to change'
+         GO TO 1
+        ELSE
+         WRITE(*,5040)
+ 5040    FORMAT(
+     &   / '   1  black (white in revVideo)'
+     &   / '   2  white (invisible)'
+     &   / '   3  red'
+     &   / '   4  orange'
+     &   / '   5  yellow'
+     &   / '   6  green'
+     &   / '   7  cyan'
+     &   / '   8  blue'
+     &   / '   9  violet'
+     &   / '  10  magenta' )
+C
+ 840     WRITE(LINE,3100) 'data colors',
+     &                    (IFCOL(IP), IP=1, NDAT)
+         WRITE(*,1005) LINE
+         WRITE(*,3105)    'data colors'
+         READ(*,1005) LINE
+         NINP = NDAT
+         CALL GETINT(LINE,IFCOL,NINP,ERROR)
+         IF(ERROR) GO TO 840
+        ENDIF
+C
       ELSE IF(OPTION.EQ.'26') THEN
+C------ change data symbols
+        IF(NDAT.EQ.0) THEN
+         WRITE(*,*) 'No current data to change'
+         GO TO 1
+        ELSE
+         WRITE(*,5050)
+ 5050    FORMAT(
+     &   / '  0  square         7  Y         '
+     &   / '  1  circle         8  flipped Y '
+     &   / '  2  triangle       9  *         '
+     &   / '  3  +             10  flipped * '
+     &   / '  4  x             11  hourglass '
+     &   / '  5  diamond       12  bowtie    '
+     &   / '  6  yield sign    13  star      ' )
+C
+ 850     WRITE(LINE,3100) 'data point symbols',
+     &                    (IFSYM(IP), IP=1, NDAT)
+         WRITE(*,1005) LINE
+         WRITE(*,3105)    'data point symbols'
+         READ(*,1005) LINE
+         NINP = NDAT
+         CALL GETINT(LINE,IFSYM,NINP,ERROR)
+         IF(ERROR) GO TO 850
+        ENDIF
+C
+      ELSE IF(OPTION.EQ.'27') THEN
 C--- Get V min,max,delta
         WRITE(*,2100) (VPOLPLF(K,1), K=1, 3)
  210    READ(*,1005)  LINE
@@ -1065,7 +1177,7 @@ C--- Get V min,max,delta
         IF(NINP.EQ.0) GO TO 1
         LAUTO = .FALSE.
 C
-      ELSE IF(OPTION.EQ.'27') THEN
+      ELSE IF(OPTION.EQ.'28') THEN
 C--- Get Vz min,max,delta
         WRITE(*,2200) (VPOLPLF(K,2), K=1, 3)
  220    READ(*,1005)  LINE

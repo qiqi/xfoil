@@ -406,6 +406,8 @@ C
 C
       IF(RLX*ABS(DXT/(X2-X1)) .GT. 0.05) RLX = 0.05*ABS((X2-X1)/DXT)
       IF(RLX*ABS(DA2)         .GT. 1.0 ) RLX = 1.0 *ABS(   1.0 /DA2)
+
+      WRITE(*,*) AMPL1, AMPL2, X1, X2, RES, AX !, RES, RES_A2, DA2, DAEPS
 C
 C---- check if converged
       IF(ABS(DA2) .LT. DAEPS) GO TO 101
@@ -1071,6 +1073,7 @@ C
 C------ laminar wake CD
         CALL DILW( HK2, RT2, DI2L, DI2L_HK2, DI2L_RT2 )
         IF(DI2L .GT. DI2) THEN
+cc        IF(.true.) THEN
 C------- laminar wake CD is greater than turbulent CD -- use laminar
 C-       (this will only occur for unreasonably small Rtheta)
 ccc         write(*,*) 'CDt CDl Rt Hk:', DI2, DI2L, RT2, HK2
@@ -2336,9 +2339,11 @@ C---- Laminar HS correlation
      &       - 0.0278*(3.0*TMP**2 - TMP**3/(HK+1.0))/(HK+1.0)
      &       - 0.0002*2.0*TMP*HK * (TMP + HK)
       ELSE
-       HS    = 0.015*    (HK-4.35)**2/HK + 1.528
-       HS_HK = 0.015*2.0*(HK-4.35)   /HK
-     &       - 0.015*    (HK-4.35)**2/HK**2
+       HS2 = 0.015
+c       HS2 = 0.09
+       HS    = HS2*    (HK-4.35)**2/HK + 1.528
+       HS_HK = HS2*2.0*(HK-4.35)   /HK
+     &       - HS2*    (HK-4.35)**2/HK**2
       ENDIF
 C
       HS_RT  = 0.

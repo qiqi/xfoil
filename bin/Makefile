@@ -6,8 +6,8 @@
 
 
 SHELL = sh
-#BINDIR = $(HOME)/bin/
-BINDIR = .
+BINDIR = /home/codes/bin/
+#BINDIR = .
 
 PROGS = xfoil pplot pxplot
 
@@ -44,12 +44,9 @@ PLTLIB = -L/usr/X11R6/lib -lX11
 ###================================================
 ###  Default compilers and flags
 ###  FFLOPT used for xsolve.f
-FC = f77
-FFLAGS  = -O 
-FFLOPT  = -O
 INSTALLCMD = install -s
 
-CC = cc
+CC = clang
 CFLAGS = -O -DUNDERSCORE
 
 ##--------------------------
@@ -100,20 +97,17 @@ CFLAGS = -O -DUNDERSCORE
 ##--------------------------
 ### Intel Fortran Compiler
 FC = flang
-FFLAGS = -O
-FFLOPT = -O
 #FTNLIB = -Vaxlib /usr/lib/C-ctype.o /usr/lib/C_name.o /usr/lib/ctype-info.o
 #FTNLIB = -Vaxlib
 #FTNLIB = -i_dynamic
 
-##--------------------------
 ### Double precision option
 #FFLAGS = -O -fdefault-real-8 -CB
 #FFLOPT = -O -fdefault-real-8 -CB
-PLTOBJ = ../plotlib/libPltDP.a 
+PLTOBJ = ../plotlib/libPlt.a 
 
-FFLAGS = -O -fdefault-real-8 -fdefault-integer-8 -ffpe-trap=invalid,zero,overflow
-FFLOPT = -O -fdefault-real-8 -fdefault-integer-8 -ffpe-trap=invalid,zero,overflow
+FFLAGS = -O -fdefault-real-8 -fdefault-integer-8
+FFLOPT = -O -fdefault-real-8 -fdefault-integer-8
 
 
 all:	 $(PROGS)
@@ -137,12 +131,17 @@ pxplot:	$(PXPLOTOBJ) $(XUTILOBJ)
 pplot:	$(PPLOTOBJ) $(XUTILOBJ)
 	$(FC) -o pplot $(PPLOTOBJ) $(XUTILOBJ)  $(PLTOBJ) $(PLTLIB) $(FTNLIB)
 
+blu: blu.o profil.o
+	$(FC) -o blu blu.o profil.o
+
+blu.o: $(SRC)/blu.f
+	$(FC) -c $(FFLAGS) $(SRC)/blu.f
 
 xfoil.o: $(SRC)/xfoil.f  $(SRC)/XFOIL.INC $(SRC)/XBL.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xfoil.f
 xpanel.o: $(SRC)/xpanel.f  $(SRC)/XFOIL.INC
 	$(FC) -c $(FFLOPT)  $(SRC)/xpanel.f
-xoper.o: $(SRC)/xoper.f  $(SRC)/XFOIL.INC
+xoper.o: $(SRC)/xoper.f  $(SRC)/XFOIL.INC  $(SRC)/BLPAR.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xoper.f
 xsolve.o: $(SRC)/xsolve.f  $(SRC)/XFOIL.INC
 	$(FC) -c $(FFLOPT)  $(SRC)/xsolve.f
@@ -156,17 +155,17 @@ xqdes.o: $(SRC)/xqdes.f  $(SRC)/XFOIL.INC $(SRC)/XDES.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xqdes.f
 xmdes.o: $(SRC)/xmdes.f  $(SRC)/XFOIL.INC $(SRC)/XDES.INC $(SRC)/CIRCLE.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xmdes.f
-xbl.o:   $(SRC)/xbl.f    $(SRC)/XFOIL.INC $(SRC)/XBL.INC
+xbl.o:   $(SRC)/xbl.f    $(SRC)/XFOIL.INC $(SRC)/XBL.INC $(SRC)/BLPAR.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xbl.f
-xblsys.o: $(SRC)/xblsys.f                  $(SRC)/XBL.INC
+xblsys.o: $(SRC)/xblsys.f                  $(SRC)/XBL.INC $(SRC)/BLPAR.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xblsys.f
-xplots.o: $(SRC)/xplots.f $(SRC)/XFOIL.INC
+xplots.o: $(SRC)/xplots.f $(SRC)/XFOIL.INC $(SRC)/XDES.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xplots.f
 pntops.o: $(SRC)/pntops.f $(SRC)/XFOIL.INC $(SRC)/XDES.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/pntops.f
-blplot.o: $(SRC)/blplot.f $(SRC)/XFOIL.INC
+blplot.o: $(SRC)/blplot.f $(SRC)/XFOIL.INC $(SRC)/BLPAR.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/blplot.f
-xpol.o: $(SRC)/xpol.f     $(SRC)/XFOIL.INC
+xpol.o: $(SRC)/xpol.f     $(SRC)/XFOIL.INC $(SRC)/PINDEX.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/xpol.f
 xgeom.o: $(SRC)/xgeom.f 
 	$(FC) -c $(FFLAGS)  $(SRC)/xgeom.f
@@ -196,7 +195,7 @@ polplt.o: $(SRC)/polplt.f $(SRC)/PINDEX.INC
 iopol.o: $(SRC)/iopol.f $(SRC)/PINDEX.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/iopol.f
 
-pplot.o:  $(SRC)/pplot.f  $(SRC)/PPLOT.INC
+pplot.o:  $(SRC)/pplot.f  $(SRC)/PPLOT.INC $(SRC)/PINDEX.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/pplot.f
 pxplot.o: $(SRC)/pxplot.f $(SRC)/PXPLOT.INC
 	$(FC) -c $(FFLAGS)  $(SRC)/pxplot.f

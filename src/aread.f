@@ -55,6 +55,7 @@ C------ must be a name string
         NAME = LINE1
       ELSE
 C------ no name, just two valid numbers... must be plain airfoil file
+        NAME = ' '
         IF(INFO.GT.0) THEN
          WRITE(*,*)
          WRITE(*,*) 'Plain airfoil file'
@@ -72,8 +73,8 @@ C-    so now try to read four MSES domain numbers from second line
 C------ less than two valid numbers... not a valid format
         GO TO 99
 C
-      ELSEIF(NA.EQ.2) THEN
-C------ only two numbers... usual .dat labeled file
+      ELSEIF(NA.LT.4) THEN
+C------ less than four numbers... usual .dat labeled file
         NAME = LINE1
         IF(INFO.GT.0) THEN
          WRITE(*,*)

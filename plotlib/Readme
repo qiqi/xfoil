@@ -35,10 +35,15 @@ Make the plotlib under Unix by:
   you can simply make a symbolic link to one of these config.make.xx files to 
   define config.make using:
 
-  %ln -s config.make.SP config.make
+    % ln -s config.make.SP config.make
+
+  or simply 
+
+    % cp config.make.SP config.make
 
   Then do the make using 
-  % make 
+
+    % make 
 
 
 

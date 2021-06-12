@@ -63,8 +63,13 @@ C
         SX =  YN(I)
         SY = -XN(I)
         SMOD = SQRT(SX*SX + SY*SY)
-        XN(I) = SX/SMOD
-        YN(I) = SY/SMOD
+        IF(SMOD .EQ. 0.0) THEN
+         XN(I) = -1.0
+         YN(I) = 0.0
+        ELSE
+         XN(I) = SX/SMOD
+         YN(I) = SY/SMOD
+        ENDIF
    10 CONTINUE
 C
 C---- average normal vectors at corner points
@@ -73,10 +78,17 @@ C---- average normal vectors at corner points
           SX = 0.5*(XN(I) + XN(I+1))
           SY = 0.5*(YN(I) + YN(I+1))
           SMOD = SQRT(SX*SX + SY*SY)
-          XN(I)   = SX/SMOD
-          YN(I)   = SY/SMOD
-          XN(I+1) = SX/SMOD
-          YN(I+1) = SY/SMOD
+          IF(SMOD .EQ. 0.0) THEN
+           XN(I) = -1.0
+           YN(I) = 0.0
+           XN(I+1) = -1.0
+           YN(I+1) = 0.0
+          ELSE
+           XN(I)   = SX/SMOD
+           YN(I)   = SY/SMOD
+           XN(I+1) = SX/SMOD
+           YN(I+1) = SY/SMOD
+          ENDIF
         ENDIF
  20   CONTINUE
 C
@@ -1265,7 +1277,7 @@ C
       WRITE(*,*) 'Calculating wake trajectory ...'
 C
 C---- number of wake points
-      NW = N/8 + 2
+      NW = N/12 + 10*INT(WAKLEN)
       IF(NW.GT.IWX) THEN
        WRITE(*,*)
      &  'Array size (IWX) too small.  Last wake point index reduced.'
@@ -1275,6 +1287,13 @@ C
       DS1 = 0.5*(S(2) - S(1) + S(N) - S(N-1))
       CALL SETEXP(SNEW(N+1),DS1,WAKLEN*CHORD,NW)
 C
+
+c      write(*,*) waklen, chord, waklen*chord
+c      write(*,*) ds1
+c      do i = n+1, n+nw
+c        write(*,*) i-n, snew(i)
+c      enddo
+
       XTE = 0.5*(X(1)+X(N))
       YTE = 0.5*(Y(1)+Y(N))
 C

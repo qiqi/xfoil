@@ -8,7 +8,8 @@ C------------------------------------------------------
       INCLUDE 'BLPAR.INC'
       CHARACTER*4 COMAND
 ccc   CHARACTER*4 CHDUM
-      REAL XXBL(IVX,2), XXTR(2), WS(IVX,2), XS(IVX,2)
+      REAL XXBL(IVX,2), XXTR(2)
+      REAL WS(IVX,2), XS(IVX,2), WS2(IVX,2)
       REAL HK(IVX,2), ANU(IVX,2)
       INTEGER NSIDE(2), IBL1(2), IBL2(2)
 C
@@ -16,6 +17,7 @@ C
       CHARACTER*80 FILDEF, LINE
       CHARACTER*32 COLNAM
       CHARACTER*2 FILSUF(12)
+      CHARACTER*1 CXXBL
 C
       DIMENSION IINPUT(20)
       DIMENSION RINPUT(20)
@@ -44,20 +46,11 @@ C---- get current color for restoration
       CALL GETCOLOR(ICOL0)
 C
 C---- set up Cartesian BL x-arrays for plotting
-      DO IS=1, 2
-        DO IBL=2, NBL(IS)
-          I = IPAN(IBL,IS)
-          XXBL(IBL,IS) = X(I)
-          XXTR(IS) = XLE + (XTE-XLE)*XOCTR(IS) - (YTE-YLE)*YOCTR(IS)
-        ENDDO
-      ENDDO
-C
-      NSIDE(1) = NBL(2) + IBLTE(1) - IBLTE(2)
-      NSIDE(2) = NBL(2)
-C
-      DO IBLW=1, NBL(2)-IBLTE(2)
-        XXBL(IBLTE(1)+IBLW,1) = XXBL(IBLTE(2)+IBLW,2)
-      ENDDO
+      IF(IXBLP.EQ.1) THEN
+       CALL XBLSET(IVX,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      ELSE
+       CALL SBLSET(IVX,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      ENDIF
 C
 C
 cC---- max BL coordinate plotted
@@ -68,9 +61,6 @@ c        DO 31 IBL=2, NSIDE(IS)
 c          IF(XXBL(IBL,IS) .LT. XBLMAX) NUMBL(IS) = IBL-1
 c 31     CONTINUE
 c 3    CONTINUE
-C
-      NUMBL(1) = NSIDE(1) - 1
-      NUMBL(2) = NSIDE(2) - 1
 C
 C---- plot width (standard width = 1)
       XWIDTH = 0.9
@@ -139,7 +129,7 @@ C
       DIDEL = (DIMAX-DIMIN)/5.0
 C
 C
-      ACR1 = MAX(1.0,ACRIT+1.5)
+      ACR1 = MAX(1.0,ACRIT(1)+1.5,ACRIT(2)+1.5)
       CALL SCALIT(1,ACR1,0.0,YFAC)
       ANDEL = 1.0/(5.0*YFAC)
       ANMAX = ANDEL*AINT(ACR1/ANDEL + 0.6)
@@ -204,6 +194,7 @@ C
       IF(COMAND.EQ.'BE  ') GO TO 120
       IF(COMAND.EQ.'DUMP') GO TO 140
       IF(COMAND.EQ.'OVER') GO TO 140
+      IF(COMAND.EQ.'XPLO') GO TO 145
       IF(COMAND.EQ.'XLIM' .OR. COMAND.EQ.'X   ') GO TO 147
       IF(COMAND.EQ.'YLIM' .OR. COMAND.EQ.'Y   ') GO TO 148
       IF(COMAND.EQ.'BLOW' .OR. COMAND.EQ.'B   ') GO TO 150
@@ -278,13 +269,13 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
       CALL PLCHAR(-4.0*CH,YL-0.5*CH,1.4*CH,'H',0.0,1)
       CALL PLSUBS(-4.0*CH,YL-0.5*CH,1.4*CH,'k',0.0,1,PLCHAR)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -368,7 +359,7 @@ C
 C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
 C
       CALL NEWPEN(3)
       IF((YMAX-YMIN)/YDEL .GT. 2.99) THEN
@@ -383,7 +374,7 @@ C
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -462,14 +453,14 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.0*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.0*CH,CXXBL,0.0,1)
       CALL PLSUBS(-5.0*CH,YL-0.5*CH,1.0*CH,'e'   ,0.0,1,PLCHAR)
       CALL PLCHAR(-5.0*CH,YL-0.5*CH,1.0*CH,'U /V',0.0,4)
       CALL PLMATH(999.0  ,999.0    ,1.0*CH,   '&',0.0,1)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -537,13 +528,13 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
       CALL PLCHAR(-3.5*CH,YL-0.6*CH,1.4*CH,'C',0.0,1)
       CALL PLSUBS(-3.5*CH,YL-0.6*CH,1.4*CH,'f',0.0,1,PLCHAR)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -611,14 +602,14 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X' ,0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL ,0.0,1)
       CALL PLCHAR(-3.5*CH,YL-0.6*CH,1.4*CH,'C' ,0.0,1)
       CALL PLMATH(-3.7*CH,YL-0.6*CH,1.5*CH,' `',0.0,2)
       CALL PLSUBS(-3.5*CH,YL-0.6*CH,1.4*CH,'D' ,0.0,1,PLSLAN)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -699,7 +690,7 @@ C
 C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
 C
       IF((YMAX-YMIN)/YDEL .GT. 1.99) THEN
        YL1 = YSF*(YMAX-YMIN-0.5*YDEL)
@@ -714,7 +705,7 @@ C
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -740,7 +731,7 @@ C
         IF(.NOT.TFORCE(IS)) THEN
          IBL = ITRAN(IS) - 1
          CALL PLOT((XXBL(IBL,IS)-XMIN)*XSF,(CTAU(IBL,IS)-YMIN)*YSF,3)
-         CALL PLOT((XXTR(IS)    -XMIN)*XSF,(ACRIT       -YMIN)*YSF,2)
+         CALL PLOT((XXTR(IS)    -XMIN)*XSF,(ACRIT(IS)   -YMIN)*YSF,2)
         ENDIF
 C
         IF(LFREQP) THEN
@@ -759,9 +750,16 @@ C
      &               XXTR(IS), FREF,
      &               XMIN,XSF, YMIN,YSF, CHF)
         ENDIF
+        IF(ACRIT(1) .NE. ACRIT(2)) THEN
+         CALL DASH(0.0,XSF*(XMAX-XMIN),YSF*(ACRIT(IS)-YMIN))
+        ENDIF
       ENDDO
 C
       CALL NEWCOLOR(ICOL0)
+
+      IF(ACRIT(1) .EQ. ACRIT(2)) THEN
+        CALL DASH(0.0,XSF*(XMAX-XMIN),YSF*(ACRIT(1)-YMIN))
+      ENDIF
 C
       IF(LFREQP) THEN
 C----- add label to plot
@@ -773,7 +771,6 @@ C----- add label to plot
        CALL PLCHAR(XLAB,YLAB,CH,' L/V ',0.0,5)
       ENDIF
 C
-      CALL DASH(XSF*XMIN,XSF*XMAX,YSF*(ACRIT-YMIN))
 C
       CALL NEWCLIP(XCLIP1,XCLIP2,YCLIP1,YCLIP2)
       CALL PLFLUSH
@@ -812,7 +809,7 @@ C
 C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
 C
       IF((YMAX-YMIN)/YDEL .GT. 1.99) THEN
        YL1 = YSF*(YMAX-YMIN-0.5*YDEL)
@@ -833,7 +830,7 @@ C
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -918,7 +915,7 @@ C
 C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
 C
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
       CALL PLCHAR(-4.4*CH,YL-0.6*CH,1.4*CH,'Re',0.0,2)
@@ -926,7 +923,7 @@ C
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -959,13 +956,13 @@ c          UC = UEI * (1.0-TKLAM) / (1.0 - TKLAM*(UEI/QINF)**2)
 c          AMSQ = UC*UC*HSTINV / (GAMM1*(1.0 - 0.5*UC*UC*HSTINV))
 c          CALL HKIN( DSI/THI, AMSQ, HKI, DUMMY, DUMMY)
 c          
-c          TRB = 100.0 * EXP( -(ACRIT+8.43)/2.4 )
+c          TRB = 100.0 * EXP( -(ACRIT(IS)+8.43)/2.4 )
 c          HMI = 1.0/(HKI-1.0)
 c          GFUN = 3.625*LOG(TANH(10.0*(HMI - 0.55)) + 6.0)
 c          RCR  = 163.0 + EXP((1.0-TRB/6.91)*GFUN)
 cC
 c          THH = TANH(10.0/(HKI-1.0) - 5.5)
-c          RCR = 163.0 + 74.3*(0.55*THH + 1.0)*(0.94*ACRIT + 1.0)
+c          RCR = 163.0 + 74.3*(0.55*THH + 1.0)*(0.94*ACRIT(IS) + 1.0)
 cC
 c          WS(IBL,IS) = RCR
 c 8032   CONTINUE
@@ -1040,7 +1037,7 @@ C
 C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
 C
       IF((YMAX-YMIN)/YDEL .GT. 1.99) THEN
        YL1 = YSF*(YMAX-YMIN-0.5*YDEL)
@@ -1056,7 +1053,7 @@ C
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -1089,7 +1086,7 @@ c          UC = UEI * (1.0-TKLAM) / (1.0 - TKLAM*(UEI/QINF)**2)
 c          AMSQ = UC*UC*HSTINV / (GAMM1*(1.0 - 0.5*UC*UC*HSTINV))
 c          CALL HKIN( DSI/THI, AMSQ, HKI, DUMMY, DUMMY)
 cC          
-c          TRB = 100.0 * EXP( -(ACRIT+8.43)/2.4 )
+c          TRB = 100.0 * EXP( -(ACRIT(IS)+8.43)/2.4 )
 c          HMI = 1.0/(HKI-1.0)
 c          GFUN = 3.625*LOG(TANH(10.0*(HMI - 0.55)) + 6.0)
 c          RCR  = 163.0 + EXP((1.0-TRB/6.91)*GFUN)
@@ -1161,14 +1158,14 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
       CALL PLCHAR(-7.5*CH,YL-0.5*CH,1.4*CH,'G /A ',0.0,5)
       CALL PLMATH(-7.5*CH,YL-0.5*CH,1.4*CH,' 2  2',0.0,5)
 ccc   CALL PLSUBS(-7.5*CH,YL-0.5*CH,1.4*CH,'k',0.0,1,PLCHAR)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -1276,13 +1273,13 @@ C
       CALL NEWPEN(3)
       XL = XSF*(XMAX-XMIN-1.5*XDEL)
       YL = YSF*(YMAX-YMIN-1.5*YDEL)
-      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,'X',0.0,1)
+      CALL PLCHAR(XL-0.6*CH,-3.5*CH,1.2*CH,CXXBL,0.0,1)
       CALL PLMATH(-2.0*CH,YL-0.5*CH,1.4*CH,'b',0.0,1)
 ccc   CALL PLSUBS(-2.0*CH,YL-0.5*CH,1.4*CH,'k',0.0,1,PLCHAR)
 C
       IF(LVLAB) CALL VLABEL(0.0,YSF*(YMAX-YMIN),CH,
      &                      NAME,
-     &                      REINF,MINF,ACRIT,ALFA,
+     &                      REINF,MINF,ACRIT(1),ALFA,
      &                      CL,CD,XOCTR(1),XOCTR(2),
      &                      ICOLS(1),ICOLS(2),LVCONV)
 C
@@ -1325,22 +1322,6 @@ ccc      CALL ASKC('Hit <cr>^',CHDUM,COMARG)
       GO TO 500
 C
 C===================================================
- 147  CONTINUE
-      IF(NINPUT.GE.3) THEN
-       XMIN = RINPUT(1)
-       XMAX = RINPUT(2)
-       XDEL = RINPUT(3)
-      ELSE
-       WRITE(*,9101) XMIN, XMAX, XDEL
- 9101  FORMAT(/' Currently, Xmin,Xmax,Xdel =', 3F11.4,
-     &        /' Enter new  Xmin,Xmax,Xdel: ', $ )
-       READ(*,*,ERR=147) XMIN, XMAX, XDEL
-      ENDIF
-C
-      GO TO (500,10,20,30,40,50,60,70,80,90,100,110,120) KPLOT+1
-      GO TO 500
-C
-C===================================================
  140  IF(KPLOT.EQ.0) THEN
        WRITE(*,*) 'No current plot'
        GO TO 500
@@ -1377,7 +1358,11 @@ C
       WRITE(LU,1003) '#  alpha =', ALFA/DTOR
       WRITE(LU,1003) '#  Mach  =', MINF
       WRITE(LU,1002) '#  Reyn  =', INT(REINF+0.5)
-      WRITE(LU,1003) '#  Ncrit =', ACRIT
+      IF(ACRIT(1) .EQ. ACRIT(2)) THEN
+       WRITE(LU,1003) '#  Ncrit =', ACRIT(1)
+      ELSE
+       WRITE(LU,1003) '#  Ncrit =', ACRIT(1), ACRIT(2)
+      ENDIF
       WRITE(LU,1001) '#'
       WRITE(LU,1001)
      & '#    x           ', FILSUF(KPLOT)
@@ -1447,6 +1432,7 @@ C
            IBL2(IS) = NSIDE(IS)
            WS(IBL,IS) = CTAU(IBL,IS)
            XS(IBL,IS) = XXBL(IBL,IS)
+           WS2(IBL,IS) = CTQ(IBL,IS)
 C
           ELSEIF(KPLOT.EQ.9 .OR. KPLOT.EQ.10) THEN
 C--------- 1 / (total enthalpy)
@@ -1519,8 +1505,12 @@ C
 C
       DO IS = 1, 2
         DO IBL = IBL1(IS), IBL2(IS)
-          WRITE(LU,8500) XS(IBL,IS), WS(IBL,IS)
- 8500     FORMAT(1X,2G14.6)
+          IF(KPLOT.EQ.8) THEN
+           WRITE(LU,8500) XS(IBL,IS), WS(IBL,IS), WS2(IBL,IS)
+          ELSE
+           WRITE(LU,8500) XS(IBL,IS), WS(IBL,IS)
+          ENDIF
+ 8500     FORMAT(1X,3G14.6)
         ENDDO
         WRITE(LU,1000)
       ENDDO
@@ -1591,7 +1581,8 @@ C---- plot data
 C
         IBL = IBL1(IS)
         NNBL = IBL2(IS) - IBL1(IS) + 1
-        SSH = 1.3*SH
+cc      SSH = 1.3*SH
+        SSH = 0.7*CH
         CALL XYSYMB(NNBL,XS(IBL,IS),WS(IBL,IS),
      &              XMIN,XSF,YMIN,YSF,SSH,5)
       ENDDO
@@ -1616,6 +1607,35 @@ C
  129  CONTINUE
       WRITE(*,*) 'File READ error'
       CLOSE(LU)
+      GO TO 500
+C
+C===================================================
+ 145  CONTINUE
+      IF(IXBLP.EQ.1) THEN
+       IXBLP = 2
+       CALL SBLSET(IVX,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      ELSE
+       IXBLP = 1
+       CALL XBLSET(IVX,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      ENDIF
+C
+      GO TO (500,10,20,30,40,50,60,70,80,90,100,110,120) KPLOT+1
+      GO TO 500
+C
+C===================================================
+ 147  CONTINUE
+      IF(NINPUT.GE.3) THEN
+       XMIN = RINPUT(1)
+       XMAX = RINPUT(2)
+       XDEL = RINPUT(3)
+      ELSE
+       WRITE(*,9101) XMIN, XMAX, XDEL
+ 9101  FORMAT(/' Currently, Xmin,Xmax,Xdel =', 3F11.4,
+     &        /' Enter new  Xmin,Xmax,Xdel: ', $ )
+       READ(*,*,ERR=147) XMIN, XMAX, XDEL
+      ENDIF
+C
+      GO TO (500,10,20,30,40,50,60,70,80,90,100,110,120) KPLOT+1
       GO TO 500
 C
 C===================================================
@@ -1817,7 +1837,7 @@ C...................................................................
  1000 FORMAT(A)
  1001 FORMAT(A,A,A,A)
  1002 FORMAT(A,I9)
- 1003 FORMAT(A,F9.4)
+ 1003 FORMAT(A,2F9.4)
  1010 FORMAT(1X,A4,' command not recognized.  Type a "?" for list')
  1050 FORMAT(/'   <cr>   Return to OPER menu'
      &      //'   H      Plot kinematic shape parameter'
@@ -1834,6 +1854,7 @@ C...................................................................
      &       /'   OVER f Overlay current plot variable from file'
      &      //'   X  rrr Change x-axis limits'
      &       /'   Y  rrr Change y-axis limits on current plot'
+     &       /'   XPLO   Toggle plotting  vs  x or s'
      &      //'   BLOW   Cursor blowup of current plot'
      &       /'   RESE   Reset to default x,y-axis limits'
      &       /'   SIZE r Change absolute plot-object size'
@@ -1845,6 +1866,69 @@ C...................................................................
      &       /'   CLIP   Toggle line-plot clipping'
      &       /'   FRPL   Toggle TS frequency plotting')
       END ! BLPLOT
+
+
+
+      SUBROUTINE XBLSET(IDIM,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      INCLUDE 'XFOIL.INC'
+      REAL XXBL(IDIM,2), XXTR(2)
+      INTEGER NSIDE(2), NUMBL(2)
+      CHARACTER*(*) CXXBL
+C
+      DO IS=1, 2
+        DO IBL=2, NBL(IS)
+          I = IPAN(IBL,IS)
+          XXBL(IBL,IS) = X(I)
+          XXTR(IS) = XLE + (XTE-XLE)*XOCTR(IS) - (YTE-YLE)*YOCTR(IS)
+        ENDDO
+      ENDDO
+C
+      NSIDE(1) = NBL(2) + IBLTE(1) - IBLTE(2)
+      NSIDE(2) = NBL(2)
+C
+      DO IBLW=1, NBL(2)-IBLTE(2)
+        XXBL(IBLTE(1)+IBLW,1) = XXBL(IBLTE(2)+IBLW,2)
+      ENDDO
+C
+      NUMBL(1) = NSIDE(1) - 1
+      NUMBL(2) = NSIDE(2) - 1
+C
+      CXXBL = 'X'
+C
+      RETURN
+      END ! XBLSET
+
+
+
+      SUBROUTINE SBLSET(IDIM,XXBL,XXTR,NSIDE,NUMBL,CXXBL)
+      INCLUDE 'XFOIL.INC'
+      REAL XXBL(IDIM,2), XXTR(2)
+      INTEGER NSIDE(2), NUMBL(2)
+      CHARACTER*(*) CXXBL
+C
+      DO IS=1, 2
+        DO IBL=2, NBL(IS)
+          XXBL(IBL,IS) = XSSI(IBL,IS)
+          XXTR(IS) = XSSITR(IS)
+        ENDDO
+      ENDDO
+C
+      NSIDE(1) = NBL(2) + IBLTE(1) - IBLTE(2)
+      NSIDE(2) = NBL(2)
+C
+      DO IBLW=1, NBL(2)-IBLTE(2)
+         XXBL(IBLTE(1)+IBLW,1) = XXBL(IBLTE(2)+IBLW,2)
+     & + XXBL(IBLTE(1)     ,1) - XXBL(IBLTE(2)     ,2)
+      ENDDO
+C
+      NUMBL(1) = NSIDE(1) - 1
+      NUMBL(2) = NSIDE(2) - 1
+C
+      CXXBL = 'S'
+C
+      RETURN
+      END ! SBLSET
+
 
 
       SUBROUTINE VLABEL(X0,Y0,CH,
@@ -1930,3 +2014,4 @@ C
 C
       RETURN
       END ! VLABEL
+

@@ -600,13 +600,15 @@ C     X,XS,S  usual spline arrays     (input)        |
 C                                                    |
 C----------------------------------------------------
 C
+      STOL = (S(N) - S(1)) * 1.0E-6
+C
       DO 10 ITER=1, 10
         CALL SEVALL(SI,X,XS,S,N, XX,XXS,XXSS)
         DS = (XI-XX)/XXS
         SI = SI + DS
-        IF(ABS(DS/(S(N)-S(1))) .LT. 1.0E-5) RETURN
+        IF(ABS(DS) .LT. STOL) RETURN
    10 CONTINUE
-      WRITE(6,*) 'SINVRT: spline inversion failed.  Continuing...'
+      WRITE(*,*) 'SINVRT: spline inversion failed.  ds/smax =', DS/STOL
       RETURN
 C
       END ! SINVRT

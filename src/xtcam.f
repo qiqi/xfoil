@@ -99,8 +99,7 @@ C---- find the current buffer airfoil camber and thickness
       CALL GETCAM(XCM,YCM,NCM,XTK,YTK,NTK,
      &            XB,XBP,YB,YBP,SB,NB )
 C
-      write(*,*) 'xc0 xc1', xcm(1) , xcm(ncm)
-
+ccc      write(*,*) 'xc0 xc1', xcm(1) , xcm(ncm)
       NCAM = MIN( 201 , NTX )
       DO K=1, NCAM
         XCAM(K) = XCM(1) + (XCM(NCM)-XCM(1))*FLOAT(K-1)/FLOAT(NCAM-1)
@@ -209,7 +208,8 @@ C
      &  /'   TFAC rr Scale existing thickness and camber'
      &  /'   TSET rr Set new thickness and camber'
      &  /'   HIGH rr Move camber and thickness highpoints'
-     &  /'   WRTC    Write airfoil camber x/c,y/c to file'
+     &  /'   WRTT f  Write airfoil thickness x/c,t/c to file'
+     &  /'   WRTC f  Write airfoil camber    x/c,y/c to file'
      & //'   RDAC    Read   added camber  x/c,y/c from file'
      &  /'   SETC    Set    added camber  x/c,y/c from camberline'
      &  /'   INPC    Input  added camber  x/c,y/c from keyboard'
@@ -254,8 +254,12 @@ C--------------------------------------------------------
        GO TO 100
 C
 C--------------------------------------------------------
-      ELSEIF(COMAND.EQ.'WRTC') THEN
-       CALL ASKS('Enter output camber filename^',FNAME)
+      ELSEIF(COMAND.EQ.'WRTT') THEN
+       IF(COMARG.EQ.' ') THEN
+        CALL ASKS('Enter output thickness filename^',FNAME)
+       ELSE
+        FNAME = COMARG
+       ENDIF
 C
        OPEN(LU,FILE=FNAME,STATUS='OLD',ERR=12)
        WRITE(*,*)
@@ -264,38 +268,77 @@ C
        IF(INDEX('Nn',ANS).EQ.0) GO TO 13
 C
        CLOSE(LU)
-       WRITE(*,*) 'Current camber not saved.'
+       WRITE(*,*) 'Current thickness not saved.'
        GO TO 500
 C
  12    OPEN(LU,FILE=FNAME,STATUS='NEW',ERR=15)
  13    REWIND(LU)
 C
 C--- Write out normalized camber coordinates (x/c in range 0->1, y/c)
-       WRITE(LU,1000) 'Camber: '//NAME
-       DO K = 1, NCM
-         WRITE(LU,14) (XCM(K)-XCM(1))/XBCH,(YCM(K)-YCM(1))/XBCH
+       WRITE(LU,1000) 'Thickness: '//NAME
+       DO K = 1, NTK
+         XTN = (XTK(K)-XTK(1))/XBCH
+         YTN = (YTK(K)-YTK(1))/XBCH
+         KM = MAX( 1 , K-1 )
+         KP = MIN( NTK , K+1 )
+         DCDX = (YTK(KP)-YTK(KM)) / (XTK(KP)-XTK(KM))
+         WRITE(LU,14) XTN, YTN, DCDX
        END DO
        CLOSE(LU)
        GO TO 500
 C
- 14    FORMAT(2(1X,F12.6))
+ 14    FORMAT(1X, 3G15.7)
 C
- 15    WRITE(*,*) 'Error opening camber save file'
+ 15    WRITE(*,*) 'Error opening thickness save file'
+       GO TO 500
+C
+C--------------------------------------------------------
+      ELSEIF(COMAND.EQ.'WRTC') THEN
+       IF(COMARG.EQ.' ') THEN
+        CALL ASKS('Enter output camber filename^',FNAME)
+       ELSE
+        FNAME = COMARG
+       ENDIF
+C
+       OPEN(LU,FILE=FNAME,STATUS='OLD',ERR=22)
+       WRITE(*,*)
+       WRITE(*,*) 'Output file exists.  Overwrite?  Y'
+       READ(*,1000) ANS
+       IF(INDEX('Nn',ANS).EQ.0) GO TO 23
+C
+       CLOSE(LU)
+       WRITE(*,*) 'Current camber not saved.'
+       GO TO 500
+C
+ 22    OPEN(LU,FILE=FNAME,STATUS='NEW',ERR=25)
+ 23    REWIND(LU)
+C
+C--- Write out normalized camber coordinates (x/c in range 0->1, y/c)
+       WRITE(LU,1000) 'Camber: '//NAME
+       DO K = 1, NCM
+         WRITE(LU,24) (XCM(K)-XCM(1))/XBCH,(YCM(K)-YCM(1))/XBCH
+       END DO
+       CLOSE(LU)
+       GO TO 500
+C
+ 24    FORMAT(1X, 3G15.7)
+C
+ 25    WRITE(*,*) 'Error opening camber save file'
        GO TO 500
 C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'RDAC ') THEN
        CALL ASKS('Enter added camber filename^',FNAME)
-       OPEN(LU,FILE=FNAME,STATUS='OLD',ERR=19)
-       READ(LU,1000,ERR=18,END=18) LINE
+       OPEN(LU,FILE=FNAME,STATUS='OLD',ERR=31)
+       READ(LU,1000,ERR=30,END=30) LINE
        NCADD = 0
        DO K = 1, NTX
-         READ(LU,*,ERR=18,END=18) XX,YY
+         READ(LU,*,ERR=30,END=30) XX,YY
          NCADD = NCADD + 1
          XCADD(NCADD) = XX
          YCADD(NCADD) = YY
        END DO
- 18    CLOSE(LU)
+ 30    CLOSE(LU)
        IF(NCADD.LE.1 .OR.  (XCADD(NCADD)-XCADD(1)).EQ.0.0) THEN
          NCADD = 2
          XCADD(1) = XCAM(1)
@@ -327,7 +370,7 @@ C----- interpolate to dense plotting array
        LDCPLOT = .FALSE.
        GO TO 200
 
- 19    WRITE(*,*)
+ 31    WRITE(*,*)
        WRITE(*,*) 'Error opening added camber file'
        GO TO 500
 C
@@ -353,7 +396,7 @@ C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'INPC') THEN
 C----- Manual input of camber points
- 20    WRITE(*,2000)
+ 40    WRITE(*,2000)
  2000  FORMAT(/' Manual input of camber x/c,y/c:',
      &       //' Input x/c, y/c pairs from  x/c = 0  to  x/c = 1',
 cc     &       /' Identical successive points enable a slope break',
@@ -363,10 +406,10 @@ C--- Points of x/c, y/c are added to existing definition of added camber line
        CALL GETCOLOR(ICOL0)
        CALL NEWCOLORNAME('RED')
        NCADD = 0
-       DO 25 I=1, 2*IQX
- 23      READ(*,1000,ERR=24) LINE
-         IF(LINE.EQ.' ') GO TO 26
-         READ(LINE,*,ERR=24,END=24) XX,YY
+       DO 45 I=1, 2*IQX
+ 43      READ(*,1000,ERR=44) LINE
+         IF(LINE.EQ.' ') GO TO 46
+         READ(LINE,*,ERR=44,END=44) XX,YY
          IF(XX.LE.0.0) THEN
           XX = 0.0
          ELSEIF(XX.GE.1.0) THEN
@@ -380,12 +423,12 @@ C
          YPL = YSF*(YCADD(NCADD)-YOFF-DYOFFC)
          CALL PLSYMB(XPL,YPL,CHS*XSF,1,0.0,I-1)
          CALL PLFLUSH
-         GO TO 25
- 24      WRITE(*,*) 'try again'
-         GO TO 23
- 25    CONTINUE
+         GO TO 45
+ 44      WRITE(*,*) 'try again'
+         GO TO 43
+ 45    CONTINUE
 C----- Sort points allowing duplicates for slope breaks 
- 26    CALL SORTDUP(NCADD,XCADD,YCADD)
+ 46    CALL SORTDUP(NCADD,XCADD,YCADD)
        CALL FIXDUP (NCADD,XCADD,YCADD)
        CALL NEWCOLOR(ICOL0)
 C----- spline camber line y(x)
@@ -402,7 +445,7 @@ C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'INPP') THEN
 C----- Manual input of loading points
- 30    WRITE(*,3000)
+ 50    WRITE(*,3000)
  3000  FORMAT(/' Manual input of loading x/c, DCp:',
      &       //' Input x/c, DCp pairs from  x/c = 0  to  x/c = 1',
 cc     &       /' Identical successive points enable a slope break',
@@ -419,15 +462,16 @@ C
        CALL NEWCOLORNAME('RED')
        CALL NEWPEN(2)
        XLAB = (XPMIN         -XOFF )*XSF      - 4.0*CHL
-       YLAB = (YPMAX-0.5*DXYP-YOFFP)*YSFP*YSF - 0.6*CHL
+       YLAB = (YPMAX-0.5*DXYP-YOFFP)*YSF*YSFP - 0.6*CHL
        CALL PLCHAR(XLAB,YLAB,CHL,' Cp',0.0,3)
        CALL PLMATH(XLAB,YLAB,CHL,'O  ',0.0,3)
+       CALL PLFLUSH
 C
 C--- Points of x/c, dCp are added to existing definition of loading line
-       DO 35 I=1, 2*IQX
- 33      READ(*,1000,ERR=34) LINE
-         IF(LINE.EQ.' ') GO TO 36
-         READ(LINE,*,ERR=34) XX,YY
+       DO 55 I=1, 2*IQX
+ 53      READ(*,1000,ERR=54) LINE
+         IF(LINE.EQ.' ') GO TO 56
+         READ(LINE,*,ERR=54) XX,YY
          IF(XX.LE.0.0) THEN
            XX = 0.0
           ELSEIF(XX.GE.1.0) THEN
@@ -437,17 +481,17 @@ C--- Points of x/c, dCp are added to existing definition of loading line
          XPADD(NPADD) = XCAM(1) + XX*XBCH
          YPADD(NPADD) = YY
 C
-         YOFFP = (DYOFFP*YOFF)/YSFP
+cc       YOFFP = (DYOFFP*YOFF)/YSFP
          XPL = (XPADD(NPADD)-XOFF )*XSF
-         YPL = (YPADD(NPADD)-YOFFP)*YSFP*YSF
+         YPL = (YPADD(NPADD)-YOFFP)*YSF*YSFP
          CALL PLSYMB(XPL,YPL,CHS,1,0.0,I-1)
          CALL PLFLUSH
-         GO TO 35
- 34      WRITE(*,*) 'try again'
-         GO TO 33
- 35    CONTINUE
+         GO TO 55
+ 54      WRITE(*,*) 'try again'
+         GO TO 53
+ 55    CONTINUE
 C----- Sort points allowing duplicates for slope breaks 
- 36    CONTINUE
+ 56    CONTINUE
        CALL SORTDUP(NPADD,XPADD,YPADD)
        CALL FIXDUP (NPADD,XPADD,YPADD)
 C
@@ -1219,6 +1263,14 @@ C------ coordinates of point on the opposite side with the same x value
         CALL SOPPS(SOPP, S(I), X,XP,Y,YP,S,N,SL)
         XOPP = SEVAL(SOPP,X,XP,S,N)
         YOPP = SEVAL(SOPP,Y,YP,S,N)
+
+        IF(I.EQ.1) THEN
+         XOPP = X(N)
+         YOPP = Y(N)
+        ELSEIF(I.EQ.N) THEN
+         XOPP = X(1)
+         YOPP = Y(1)
+        ENDIF
 C
 C------ get camber and thickness
         XCM(I) = 0.5*(X(I)+XOPP)
@@ -1320,11 +1372,6 @@ C------------------------------------------------------------------
 C---- 1 / 4 pi
       DATA QOPI / 7.9577471545948E-02 /
 C
-C---- singular part of camber y(x) due to finite loadings P0,P1 at LE and TE
-C-    dYSING/dX has logarithmic singularity at x=X0,X1
-      YSING(XT) = QOPI*P1*((XT-X1)*LOG(MAX((X1-XT)/(X1-X0),1.E-6)) - XT)
-     &          - QOPI*P0*((XT-X0)*LOG(MAX((XT-X0)/(X1-X0),1.E-6)) - XT)
-C
       P0 = P(1)
       P1 = P(N)
 C
@@ -1334,8 +1381,7 @@ C
 C---- calculate Cauchy integral for y'(x) with removed singularity
       DO I=1, N
 
-         write(*,'(1x,i4,3f10.4)') i, x(i), p(i), dpdx(i)  !###@@@
-
+ccc     write(*,'(1x,i4,3f10.4)') i, x(i), p(i), dpdx(i)  !###@@@
 
         DYDX(I) = 0.0
         J = 1
@@ -1376,10 +1422,14 @@ C---- integrate regular part of y'(x) from LE
      &       + 0.5*(DYDX(I) + DYDX(I-1))*(X(I) - X(I-1))
       END DO
 C
-C---- add on singular part
+C---- add on singular part of y(x) camber due to finite loadings P0,P1 at LE and TE
+C-     dYSING/dX has logarithmic singularity at x=X0,X1
       DO I=1, N
-        Y(I) = Y(I) + YSING(X(I))
-      END DO
+        XT = X(I)
+        YSING = QOPI*P1*((XT-X1)*LOG(MAX((X1-XT)/(X1-X0),1.E-6)) - XT)
+     &        - QOPI*P0*((XT-X0)*LOG(MAX((XT-X0)/(X1-X0),1.E-6)) - XT)
+        Y(I) = Y(I) + YSING
+      ENDDO
 C
 C---- add offset and angle of attack to get y(0) = y(1) = 0
       Y0 = Y(1)

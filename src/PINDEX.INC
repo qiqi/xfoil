@@ -13,21 +13,22 @@ C
      &    ICP =  7,    ! CDpres
      &    IMA =  8,    ! Mach
      &    IRE =  9,    ! Re
-     &    INC = 10,    ! Ncrit
-     &    ICH = 11,    ! Hinge moment
-     &    IMC = 12,    ! Minimum Cp on surface
-     &    ICDH   = 13,   ! CDh  (engine thrust coeff.)
-     &    ICMDOT = 14 )  ! Cm_dot
-      PARAMETER (IPTOT=14)
+     &    ICH = 10,    ! Hinge moment
+     &    IMC = 11,    ! Minimum Cp on surface
+     &    ICDH   = 12,   ! CDh  (engine thrust coeff.)
+     &    ICMDOT = 13 )  ! Cm_dot
+      PARAMETER (IPTOT=13)
 C
 C
 C---------------------
 C  Pointers for referencing polar airfoil-side quantities
 C
       PARAMETER (
-     &    JTP = 1,     ! trip
-     &    JTN = 2 )    ! transition
-      PARAMETER (JPTOT=2)
+     &    JNC = 1,     ! Ncrit
+     &    JTP = 2,     ! trip
+     &    JTN = 3,     ! transition
+     &    JTI = 4 )    ! transition index
+      PARAMETER (JPTOT=4)
 
       CHARACTER*10 CPOLNAME(IPTOT)
       CHARACTER*5 CPOLSNAME(JPTOT)
@@ -43,7 +44,6 @@ C
      & 'CDp       ',
      & 'Mach      ',
      & 'Re        ',
-     & 'Ncrit     ',
      & 'Chinge    ', 
      & 'Cpmin     ',
      & 'CDh       ',
@@ -58,15 +58,18 @@ C
      & 'F10.5 ',   !     CDp 
      & 'F8.4  ',   !     Mach
      & 'E11.3 ',   !     Re  
-     & 'F7.3  ',   !    Ncrit
      & 'F10.5 ',   !    Chinge
      & 'F9.4  ',   !    Cpmin 
      & 'F11.5 ',   !     CDh
      & 'F9.5  ' /  !     Cmdot 
 
       DATA CPOLSNAME /
+     & 'Ncrit',
      & 'Xtrip',
-     & 'Xtr  ' /
+     & 'Xtr  ',
+     & 'Itr  ' /
       DATA CPOLSFORM  /
+     & 'F7.3  ',    !    Ncrit
      & 'F9.4  ',    !    Xtrip
-     & 'F9.4  '  /  !    Xtr
+     & 'F9.4  ',    !    Xtr
+     & 'F9.4  '  /  !    Itr

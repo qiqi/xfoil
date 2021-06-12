@@ -747,7 +747,9 @@ C
       CALL PLOT(6.*CH,0.2,-3)
 C
 CCC      CALL SCALIT(NX*2*NAPLT,W,0.0,YFAC)
-      YFAC = 1.0 / ( 2.0*AINT(0.5*(ACRIT + 1.0)) )
+cc      ACRITM = MAX(ACRIT(1),ACRIT(2))
+      ACRITM = ACRIT
+      YFAC = 1.0 / ( 2.0*AINT(0.5*(ACRITM + 1.0)) )
 C
       ANN= 1.0/YFAC
 C

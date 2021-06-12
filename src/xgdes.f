@@ -23,6 +23,7 @@ C
       CHARACTER*4 COMAND, COMOLD
       LOGICAL LRECALC, LMODPL, LPLNEW
       DIMENSION XBOX(2), YBOX(2), XRF(2)
+      DIMENSION XBT(IBX), YBT(IBX)
 C
       CHARACTER*128 COMARG, ARGOLD
       CHARACTER*1 CHKEY
@@ -136,6 +137,7 @@ C--------------------------------------------------------
      & /'   ADDP     Add    point with cursor or keyboard x,y'
      & /'   MOVP     Move   point with cursor or keyboard x,y'
      & /'   DELP     Delete point with cursor'
+     & /'   NMOV r   Move all points in surface-normal direction'
      &//'   UNIT     Normalize buffer airfoil to unit chord'
      & /'   Dist     Determine distance between 2 cursor points'
      & /'   CLIS     List curvatures'
@@ -619,8 +621,8 @@ C----- plot current geometry if it's not on the screen
 C
        IF(LGSYM) THEN
          DO I = 1, NB
-           W1(I) = XB(I)
-           W2(I) = YB(I)
+           XBT(I) = XB(I)
+           YBT(I) = YB(I)
          ENDDO
        ENDIF
 C
@@ -641,8 +643,8 @@ C
 C
        IF(LGSYM) THEN
          DO I = 1, NB
-           XBDEL = XB(I) - W1(I)
-           YBDEL = YB(I) - W2(I)
+           XBDEL = XB(I) - XBT(I)
+           YBDEL = YB(I) - YBT(I)
            XB(I) = XB(I) + XBDEL
            YB(I) = YB(I) + YBDEL
          ENDDO
@@ -716,6 +718,42 @@ C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'DELP') THEN
        CALL DELP
+C
+C--------------------------------------------------------
+      ELSEIF(COMAND.EQ.'NMOV') THEN
+       IF(NINPUT.GE.1) THEN
+        DELN = RINPUT(1)
+       ELSE
+        DELN = 0.0
+        CALL ASKR('Enter normal movement (+ outward)^',DELN)
+       ENDIF
+
+       DO IB = 1, NB
+         ENX =  YBP(IB)
+         ENY = -XBP(IB)
+         ENS = SQRT(ENX**2 + ENY**2)
+         ENX = ENX/ENS
+         ENY = ENY/ENS
+         XB(IB) = XB(IB) + ENX*DELN
+         YB(IB) = YB(IB) + ENY*DELN
+       ENDDO
+
+C----- re-spline new geometry
+       CALL SCALC(XB,YB,SB,NB)
+       CALL SEGSPL(XB,XBP,SB,NB)
+       CALL SEGSPL(YB,YBP,SB,NB)
+C
+       CALL GEOPAR(XB,XBP,YB,YBP,SB,NB,W1,
+     &             SBLE,CHORDB,AREAB,RADBLE,ANGBTE,
+     &             EI11BA,EI22BA,APX1BA,APX2BA,
+     &             EI11BT,EI22BT,APX1BT,APX2BT,
+     &             THICKB,CAMBRB )
+C
+       CALL NEWPEN(2)
+       CALL PLTAIR(XB,XBP,YB,YBP,SB,NB, XOFF,XSF,YOFF,YSF,'magenta')
+       CALL PLNEWP('magenta')
+       LGEOPL = .FALSE.
+       LGSAME = .FALSE.
 C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'MOVP') THEN
@@ -965,13 +1003,16 @@ C
       CALL SCALC(X,Y,S,N)
       CALL SEGSPL(X,XP,S,N)
       CALL SEGSPL(Y,YP,S,N)
+
       CALL NCALC(X,Y,S,N,NX,NY)
+
       CALL LEFIND(SLE,X,XP,Y,YP,S,N)
       XLE = SEVAL(SLE,X,XP,S,N)
       YLE = SEVAL(SLE,Y,YP,S,N)
       XTE = 0.5*(X(1)+X(N))
       YTE = 0.5*(Y(1)+Y(N))
       CHORD  = SQRT( (XTE-XLE)**2 + (YTE-YLE)**2 )
+
       CALL TECALC
       CALL APCALC
 C
@@ -2001,14 +2042,19 @@ C
       INCLUDE 'XFOIL.INC'
       CHARACTER*(*) COLOR
 C
+      LOGICAL LCOLOR
       INCLUDE 'XDES.INC'
 C
 C---- don't plot geometric parameters if camber/tickness plot is being shown
       IF(LPLCAM) RETURN
 C
-      CALL GETCOLOR(ICOL0)
+      LCOLOR = COLOR(1:1) .NE. ' '
 C
-      CALL NEWCOLORNAME(COLOR)
+      IF(LCOLOR) THEN
+        CALL GETCOLOR(ICOL0)
+        CALL NEWCOLORNAME(COLOR)
+      ENDIF
+C
       CALL NEWPEN(3)
 C
       NOVER = NOVER + 1
@@ -2030,7 +2076,7 @@ C
      &              THICKB,CAMBRB)
       ENDIF
 C
-      CALL NEWCOLOR(ICOL0)
+      IF(LCOLOR) CALL NEWCOLOR(ICOL0)
       CALL PLFLUSH
 C
       RETURN
@@ -2286,9 +2332,18 @@ C
 ccc       CALL PLOT(0.05,0.30,-3)
       ENDIF
 C
+C
+      CALL GETCOLOR(ICOL0)
+      ICOL = 3 + MOD(NOVER,6)
+      IF(ICOL .GE. 5) ICOL = ICOL + 1
       CALL NEWPEN(2)
-      CALL PLTAIR(W1,W3,W2,W4,W5,NN, XOFF,XSF, YOFF,YSF,'cyan')
-      CALL PLNEWP('cyan')
+      CALL NEWCOLOR(ICOL)
+C
+      CALL PLTAIR(W1,W3,W2,W4,W5,NN, XOFF,XSF, YOFF,YSF,' ')
+      CALL PLNEWP(' ')
+C
+      CALL NEWCOLOR(ICOL0)
+C
 C
 C---- restore parameters
       NAME   = NAMEW

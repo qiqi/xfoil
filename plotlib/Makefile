@@ -30,9 +30,9 @@
 #================================#
 
 # Point to your install directory
-#INSTALLDIR= $(HOME)/lib
-#INSTALLDIR= /usr/local/lib
-#INSTALLDIR= .
+#INSTALLDIR = /home/codes/bin
+#INSTALLDIR = /usr/local/lib
+INSTALLDIR = .
 
 # Use these to set default library name (overridden in config.make file) 
 PLTLIB = libPlt.a
@@ -42,20 +42,19 @@ PLTLIB = libPlt.a
 ###========================================================
 ###  Basic plot library object files
 OBJ     = plt_base.o plt_font.o plt_util.o plt_color.o \
-          set_subs.o gw_subs.o ps_subs.o Xwin.o
+          set_subs.o gw_subs.o ps_subs.o Xwin2.o
 OBJMISC =
 OBJ3D   =
 OBJOLD  =
 
-###
 ###--------------------------------------------------------
 ###  Uncomment to add the old plot compatibility routines
 OBJOLD  = plt_old.o
-###
+
 ###--------------------------------------------------------
 ###  Uncomment to add the primitive 3D-view routines
 OBJ3D  = plt_3D.o
-###
+
 ###--------------------------------------------------------
 ###  Uncomment for f77 compiler w/o AND() and RSHIFT/LSHIFT functions.
 ###   This adds some functions to duplicate these using IAND and ISHFT
@@ -67,10 +66,10 @@ OBJ3D  = plt_3D.o
 #OBJMISC = util-ops.o
 
 
-###================================================
-###  Default compilers and flags, install commands
-FC = f77
-CC  = cc
+###-------------------------------------------------------------------------
+### Set compiler, compiler flags, name of output object library
+FC = flang
+CC  = clang
 # Some fortrans need trailing underscores in C interface symbols (see Xwin.c)
 DEFINE = -DUNDERSCORE
 # Uncomment DP to make double-precision version
@@ -89,9 +88,6 @@ LINKLIB =  -lX11
 ### with definitions for compiler and flags
 
 include ./config.make
-
-###================================================
-
 
 
 ###-------------------------------------------------------------------------
@@ -154,6 +150,8 @@ util-ops.o: util-ops.f
 
 Xwin.o: Xwin.c
 	$(CC) -c $(CFLAGS) Xwin.c
+Xwin2.o: Xwin2.c
+	$(CC) -c $(CFLAGS) Xwin2.c
 
 
 ### May need to specify these on a brain-dead make system

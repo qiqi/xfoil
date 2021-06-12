@@ -1,3 +1,205 @@
+C***********************************************************************
+C    Module:  userio.f
+C 
+C    Copyright (C) 2000 Mark Drela 
+C 
+C    This program is free software; you can redistribute it and/or modify
+C    it under the terms of the GNU General Public License as published by
+C    the Free Software Foundation; either version 2 of the License, or
+C    (at your option) any later version.
+C
+C    This program is distributed in the hope that it will be useful,
+C    but WITHOUT ANY WARRANTY; without even the implied warranty of
+C    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+C    GNU General Public License for more details.
+C
+C    You should have received a copy of the GNU General Public License
+C    along with this program; if not, write to the Free Software
+C    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+C***********************************************************************
+C
+C
+C==== user input routines with prompting and error trapping
+C
+C
+      SUBROUTINE ASKI(PROMPT,IINPUT)
+C
+C---- integer input
+C
+      CHARACTER*(*) PROMPT
+      INTEGER IINPUT
+      CHARACTER LINE*80
+C
+      NP = INDEX(PROMPT,'^') - 1
+      IF(NP.LE.0) NP = LEN(PROMPT)
+C
+ 10   WRITE(*,1000) PROMPT(1:NP)
+C
+      READ (*,1001,ERR=10) LINE
+      IF(LINE.NE.' ') THEN
+        READ (LINE,*,ERR=10) IINPUT
+      ENDIF  
+      RETURN
+C
+ 1000 FORMAT(/A,'   i>  ',$)
+ 1001 FORMAT(A)
+      END ! ASKI
+
+
+      SUBROUTINE ASKR(PROMPT,RINPUT)
+C
+C---- real input
+C
+      CHARACTER*(*) PROMPT
+      REAL RINPUT
+      CHARACTER LINE*80
+C
+      NP = INDEX(PROMPT,'^') - 1
+      IF(NP.LE.0) NP = LEN(PROMPT)
+C
+ 10   WRITE(*,1000) PROMPT(1:NP)
+C
+      READ (*,1001,ERR=10) LINE
+      IF(LINE.NE.' ') THEN
+        READ (LINE,*,ERR=10) RINPUT
+      ENDIF  
+      RETURN
+C
+ 1000 FORMAT(/A,'   r>  ',$)
+ 1001 FORMAT(A)
+      END ! ASKR
+
+
+      SUBROUTINE ASKL(PROMPT,LINPUT)
+C
+C---- logical input
+C
+      CHARACTER*(*) PROMPT
+      LOGICAL LINPUT
+      CHARACTER*1 CHAR
+C
+      NP = INDEX(PROMPT,'^') - 1
+      IF(NP.LE.0) NP = LEN(PROMPT)
+C
+ 10   WRITE(*,1000) PROMPT(1:NP)
+      READ (*,1010) CHAR
+      IF(CHAR.EQ.'y') CHAR = 'Y'
+      IF(CHAR.EQ.'n') CHAR = 'N'
+      IF(CHAR.NE.'Y' .AND. CHAR.NE.'N') GO TO 10
+C
+      LINPUT = CHAR .EQ. 'Y'
+      RETURN
+C
+ 1000 FORMAT(/A,' y/n>  ',$)
+ 1010 FORMAT(A)
+      END ! ASKL
+
+
+      SUBROUTINE ASKS(PROMPT,INPUT)
+C
+C---- string of arbitrary length input
+C
+      CHARACTER*(*) PROMPT
+      CHARACTER*(*) INPUT
+C
+      NP = INDEX(PROMPT,'^') - 1
+      IF(NP.LE.0) NP = LEN(PROMPT)
+C
+      WRITE(*,1000) PROMPT(1:NP)
+      READ (*,1010) INPUT
+C
+      RETURN
+C
+ 1000 FORMAT(/A,'   s>  ',$)
+ 1010 FORMAT(A)
+      END ! ASKS
+
+
+      SUBROUTINE ASKC(PROMPT,COMAND,CARGS)
+C
+C---- returns 4-byte character string input converted to uppercase
+C---- also returns rest of input characters in CARGS string
+C
+      CHARACTER*(*) PROMPT
+      CHARACTER*(*) COMAND, CARGS
+C
+      CHARACTER*128 LINE
+      LOGICAL ERROR
+C
+      IZERO = ICHAR('0')
+C
+      NP = INDEX(PROMPT,'^') - 1
+      IF(NP.LE.0) NP = LEN(PROMPT)
+C
+      WRITE(*,1000) PROMPT(1:NP)
+      READ (*,1020) LINE
+C
+C---- strip off leading blanks
+      DO K=1, 128
+        IF(LINE(1:1) .EQ. ' ') THEN
+         LINE = LINE(2:128)
+        ELSE
+         GO TO 5
+        ENDIF
+      ENDDO
+ 5    CONTINUE
+C
+C---- find position of first blank, "+", "-", ".", ",", or numeral
+      K = INDEX(LINE,' ')
+      KI = INDEX(LINE,'-')
+      IF(KI.NE.0) K = MIN(K,KI)
+      KI = INDEX(LINE,'+')
+      IF(KI.NE.0) K = MIN(K,KI)
+      KI = INDEX(LINE,'.')
+      IF(KI.NE.0) K = MIN(K,KI)
+      KI = INDEX(LINE,',')
+      IF(KI.NE.0) K = MIN(K,KI)
+      DO I=0, 9
+        KI = INDEX(LINE,CHAR(IZERO+I))
+        IF(KI.NE.0) K = MIN(K,KI)
+      ENDDO
+C
+C---- there is no blank between command and argument... use first 4 characters
+      IF(K.LE.0) K = 5
+C
+      IF(K.EQ.1) THEN
+C------ the "command" is a number... set entire COMAND string with it
+        COMAND = LINE
+      ELSE
+C------ the "command" is some string... just use the part up to the argument
+        COMAND = LINE(1:K-1)
+      ENDIF
+C
+C---- convert it to uppercase
+      CALL LC2UC(COMAND)
+C
+      CARGS = LINE(K:128)
+      CALL STRIP(CARGS,NCARGS)
+      RETURN
+C
+ 1000 FORMAT(/A,'   c>  ',$)
+ 1020 FORMAT(A)
+      END ! ASKC
+
+
+      SUBROUTINE LC2UC(INPUT)
+      CHARACTER*(*) INPUT
+C
+      CHARACTER*26 LCASE, UCASE
+      DATA LCASE / 'abcdefghijklmnopqrstuvwxyz' /
+      DATA UCASE / 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' /
+C
+      N = LEN(INPUT)
+C
+      DO 10 I=1, N
+        K = INDEX( LCASE , INPUT(I:I) )
+        IF(K.GT.0) INPUT(I:I) = UCASE(K:K)
+ 10   CONTINUE
+C
+      RETURN
+      END ! LC2UC
+
+
 
       SUBROUTINE READI(N,IVAR,ERROR)
       DIMENSION IVAR(N)
@@ -92,18 +294,24 @@ C---- ignore everything after a "!" character
       K = INDEX(REC,'!')
       IF(K.GT.0) REC(1:ILEN) = REC(1:K-1)
 C
+C---- change tabs to spaces
+ 5    K = INDEX(REC(1:ILEN),TAB)
+      IF(K.GT.0) THEN
+       REC(K:K) = ' '
+       GO TO 5
+      ENDIF
+C
       NINP = N
 C
 C---- count up how many numbers are to be extracted
       N = 0
       K = 1
       DO 10 IPASS=1, ILEN
-C------ search for next space or comma or tab starting with current index K
+C------ search for next space or comma starting with current index K
         KSPACE = INDEX(REC(K:ILENP),' ') + K - 1
         KCOMMA = INDEX(REC(K:ILENP),',') + K - 1
-        KTAB   = INDEX(REC(K:ILENP),TAB) + K - 1
 C
-        IF(K.EQ.KSPACE .OR. K.EQ.KTAB) THEN
+        IF(K.EQ.KSPACE) THEN
 C------- just skip this space
          K = K+1
          GO TO 9
@@ -169,6 +377,13 @@ C---- ignore everything after a "!" character
       K = INDEX(REC,'!')
       IF(K.GT.0) REC(1:ILEN) = REC(1:K-1)
 C
+C---- change tabs to spaces
+ 5    K = INDEX(REC(1:ILEN),TAB)
+      IF(K.GT.0) THEN
+       REC(K:K) = ' '
+       GO TO 5
+      ENDIF
+C
       NINP = N
 C
 C---- count up how many numbers are to be extracted
@@ -178,9 +393,8 @@ C---- count up how many numbers are to be extracted
 C------ search for next space or comma starting with current index K
         KSPACE = INDEX(REC(K:ILENP),' ') + K - 1
         KCOMMA = INDEX(REC(K:ILENP),',') + K - 1
-        KTAB   = INDEX(REC(K:ILENP),TAB) + K - 1
 C
-        IF(K.EQ.KSPACE .OR. K.EQ.KTAB) THEN
+        IF(K.EQ.KSPACE) THEN
 C------- just skip this space
          K = K+1
          GO TO 9
@@ -217,126 +431,45 @@ ccc   WRITE(*,*) 'GETFLT: String-to-integer conversion error.'
 
 
 
-      SUBROUTINE GETNUM(INPUT,INUM,RNUM,NI,NR,NUMTYP,ERROR)
-      CHARACTER*(*) INPUT, NUMTYP
-      INTEGER INUM(*)
-      REAL RNUM(*)
-      LOGICAL ERROR
-C----------------------------------------------------------------
-C     Parses character string INPUT into separate arrays
-C     of integer and real numbers returned in 
-C     INUM(1..NI), RNUM(1..NR).
+      SUBROUTINE STRIP(STRING,NS)
+      CHARACTER*(*) STRING
+C----------------------------------------------------
+C     Strips leading blanks off STRING and returns 
+C     length NS of non-blank part.
+C----------------------------------------------------
+      NLEN = LEN(STRING)
 C
-C     Will attempt to extract no more than NI,NR numbers
-C     of each type, unless NI,NR = 0, in which case all 
-C     numbers present in INPUT will be extracted.
+C---- find last non-blank character
+      DO K2 = NLEN, 1, -1
+        IF(STRING(K2:K2).NE.' ') GO TO 11
+      ENDDO
+      K2 = 0
+   11 CONTINUE
 C
-C     NI,NR return how many numbers were actually extracted.
+C---- find first non-blank character
+      DO K1 = 1, K2
+        IF(STRING(K1:K1).NE.' ') GO TO 21
+      ENDDO
+   21 CONTINUE
 C
-C     String NUMTYP indicates into which array each number went...
+C---- number of non-blank characters
+      NS = K2 - K1 + 1
+      IF(NS.EQ.0) RETURN
 C
-C     NUMTYP(N:N) = 'i'   N'th number in INPUT went into INUM(N)
-C                   'r'   N'th number in INPUT went into RNUM(N)
-C                   'n'   N'th number in INPUT was blank (just a comma)
-C----------------------------------------------------------------
+C---- shift STRING so first character is non-blank
+      STRING(1:NS) = STRING(K1:K2)
 C
-C---- number of characters to be examined
-      ILEN = LEN(INPUT)
+C---- pad tail of STRING with blanks
+      DO K = NS+1, NLEN
+        STRING(K:K) = ' '
+      ENDDO
 C
-C---- ignore everything after a "!" character
-      K = INDEX(INPUT,'!')
-      IF(K.GT.0) ILEN = K-1
-C
-C---- set limit on numbers to be read
-      NIINP = NI
-      NRINP = NR
-      IF(NIINP.EQ.0) NIINP = ILEN/2 + 1
-      IF(NRINP.EQ.0) NRINP = ILEN/2 + 1
-      NINP = MAX( NIINP , NRINP )
-C
-      NI = 0
-      NR = 0
-      NUMTYP = ' '
-C
-      IF(ILEN.EQ.0) RETURN
-C
-C---- extract numbers
-      N = 0
-      K = 1
-      DO 10 IPASS=1, ILEN
-C------ find next space (pretend there's one after the end of the string)
-        KSPACE = INDEX(INPUT(K:ILEN),' ') + K - 1
-        IF(KSPACE.EQ.K-1) KSPACE = ILEN + 1
-C
-        IF(KSPACE.EQ.K) THEN
-C------- just skip this space
-         K = K+1
-         GO TO 9
-        ENDIF
-C
-C------ also find next comma
-        KCOMMA = INDEX(INPUT(K:ILEN),',') + K - 1
-        IF(KCOMMA.EQ.K-1) KCOMMA = ILEN + 1
-C
-C------ space is farther down, so we ran into something...
-        N = N+1
-C
-C------ bug out early if no more numbers are to be read
-        IF(N.GT.NINP) GO TO 11
-C
-C------ set ending delimiter position for this number
-        KDELIM = MIN(KSPACE,KCOMMA)
-C
-        IF(K.EQ.KDELIM) THEN
-C------- nothing but a comma... just set null type indicator and keep looking
-         NUMTYP(N:N) = 'n'
-         K = K+1
-         GO TO 9
-        ENDIF
-C
-C------ whatever we have, it is in substring K:KEND
-        KEND = KDELIM - 1
-C
-C------ search for floating-point number indicator in substring
-        KFLOAT = MAX( INDEX(INPUT(K:KEND),'.'),
-     &                INDEX(INPUT(K:KEND),'E'),
-     &                INDEX(INPUT(K:KEND),'e'),
-     &                INDEX(INPUT(K:KEND),'D'),
-     &                INDEX(INPUT(K:KEND),'d')  ) + K - 1
-C
-        IF(KFLOAT.GE.K .AND. KFLOAT.LE.KEND) THEN
-C------- real number... read it only if max has not been reached
-         IF(N.LE.NRINP) THEN
-          READ(INPUT(K:KEND),*,ERR=20) RNUM(N)
-          NUMTYP(N:N) = 'r'
-          NR = N
-         ENDIF
-        ELSE
-C------- integer number...
-         IF(N.LE.NIINP) THEN
-          READ(INPUT(K:KEND),*,ERR=20) INUM(N)
-          NUMTYP(N:N) = 'i'
-          NI = N
-         ENDIF
-        ENDIF
-C
-C------ keep looking after delimiter
-        K = KDELIM + 1
-C
-  9     IF(K.GE.ILEN) GO TO 11
- 10   CONTINUE
-C
-C---- normal return
- 11   CONTINUE
-      ERROR = .FALSE.
-      RETURN
-C
-C---- bzzzt !!!
- 20   CONTINUE
-ccc   WRITE(*,*) 'GETNUM: List-directed read error.'
-      ERROR = .TRUE.
       RETURN
       END
+
+
+
+
 
 
 
@@ -359,3 +492,4 @@ C
 C
       RETURN
       END ! GETARG0
+

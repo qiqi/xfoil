@@ -172,7 +172,6 @@ C
         CALL PLOT(XPLT(X(I)),YPLT(Y(I)),2)
         CALL PLOT(XPLT(X(I)+DSN*NX(I)),YPLT(Y(I)+DSN*NY(I)),2)
         CALL PLOT(XPLT(X(I)),YPLT(Y(I)),3)
-C
         XOCM = XOCI
    40 CONTINUE
 C
@@ -252,11 +251,12 @@ C---- add sonic Cp dashed line if within plot
       IF(CPSTAR.GE.CPMIN) CALL DASH(0.0,1.0,-CPSTAR*PFAC)
 C
       CALL NEWPEN(2)
-      IF(LVISC) THEN
-C----- plot viscous and inviscid Cp
-       ILE1 = IPAN(2,1)
-       ILE2 = IPAN(2,2)
+
+      ILE1 = IPAN(2,1)
+      ILE2 = IPAN(2,2)
 C
+      IF(LVISC .AND. ILE1.GT.0 .AND. ILE2.GT.0) THEN
+C----- plot viscous and inviscid Cp
        N1 = ILE1
        CALL NEWCOLOR(ICOLS(1))
        CALL XYLINE(N1,X(1),CPV(1),-XOFA,FACA,0.0,-PFAC,1)
@@ -268,8 +268,11 @@ C
        CALL NEWCOLOR(ICOL0)
        CALL XYLINE(NW,X(N+1),CPV(N+1),-XOFA,FACA,0.0,-PFAC,1)
 C
-       CALL NEWPEN(1)
-       CALL CPDASH(N+NW,X,CPI,-XOFA,FACA,-PFAC)
+       IF(LCPINV) THEN
+        CALL NEWPEN(1)
+        CALL CPDASH(N+NW,X,CPI,-XOFA,FACA,-PFAC)
+       ENDIF
+C
       ELSE
 C----- plot inviscid Cp only
        CALL XYLINE(N,X,CPI,-XOFA,FACA,0.0,-PFAC,1)
@@ -278,7 +281,7 @@ C
 C
       IF(LCPREF) THEN
        CALL GETXYL(IQX,NCPREF,XPREF,CPREF,LABREF,
-     &             'Enter Cp vs x data filename^',OCNAME)
+     &             'Enter Cp vs x data filename',OCNAME)
 C
        CALL NEWCOLORNAME('cyan')
        CALL NEWPEN(2)
@@ -293,7 +296,7 @@ C---- plot force coefficient
       YPLT = -CPMIN*PFAC
       CALL COEFPL(XPLT,YPLT,CH,LVISC,LFOREF,LVCONV,
      &            NAME,NNAME,
-     &            REINF,MINF,ACRIT,ALFA,CL,CM,CD,CDP)
+     &            REINF,MINF,ACRIT(1),ALFA,CL,CM,CD,CDP)
 C
       IF(LFOREF) THEN
        CALL NEWCOLORNAME('cyan')
@@ -393,7 +396,7 @@ C---- plot force coefficient
       YPLT = UEMAX*UFAC
       CALL COEFPL(XPLT,YPLT,CH,LVISC,LFOREF,LVCONV,
      &            NAME,NNAME,
-     &            REINF,MINF,ACRIT,ALFA,CL,CM,CD,CDP)
+     &            REINF,MINF,ACRIT(1),ALFA,CL,CM,CD,CDP)
 C
       IF(LFOREF) THEN
        CALL NEWCOLORNAME('cyan')
@@ -685,6 +688,11 @@ C----------------------------------------------
       DIMENSION DSTR(IVX,2)
       DIMENSION ICOLS(2)
 C
+      IF(IBLTE(1) .EQ. 0 .OR.
+     &   IBLTE(2) .EQ. 0      ) THEN
+       RETURN
+      ENDIF
+
       CALL GETCOLOR(ICOL0)
       CALL NEWPEN(1)
 C
@@ -839,7 +847,10 @@ C
         CALL NEWPEN(3)
         CALL PLCHAR(XLP        ,YLAB,CCH,'  N  = ',0.0,7)
         CALL PLSUBS(XLP+2.0*CCH,YLAB,CCH,   'cr'  ,0.0,2,PLCHAR)
-        CALL PLNUMB(XLP+7.0*CCH,YLAB,CCH,ACRIT    ,0.0,3)
+        CALL PLNUMB(XLP+7.0*CCH,YLAB,CCH,ACRIT(1) ,0.0,3)
+        IF(ACRIT(1) .NE. ACRIT(2)) THEN
+         CALL PLNUMB(XLP+14.0*CCH,YLAB,CCH,ACRIT(2) ,0.0,3)
+        ENDIF
        ENDIF
 C
       ENDIF
@@ -941,6 +952,7 @@ C------------------------------------------------------------------
       LOGICAL LVISC, LFOREF, LVCONV
       CHARACTER*(*) NAME
       REAL MINF
+      REAL ACRIT(*)
 C
       EXTERNAL PLCHAR
 C
@@ -1024,7 +1036,10 @@ C
        YL = YL - YSPACE
        CALL PLCHAR(XL        ,YL,CCH,'N  = ',0.0,5)
        CALL PLSUBS(XL        ,YL,CCH, 'cr'  ,0.0,2,PLCHAR)
-       CALL PLNUMB(XL+5.0*CCH,YL,CCH, ACRIT ,0.0,2)
+       CALL PLNUMB(XL+5.0*CCH,YL,CCH, ACRIT(1) ,0.0,2)
+       IF(ACRIT(1) .NE. ACRIT(2)) THEN
+       CALL PLNUMB(XL+11.0*CCH,YL,CCH, ACRIT(2) ,0.0,2)
+       ENDIF
 C
       ENDIF
 C
@@ -1169,6 +1184,7 @@ C
 C---- set scale, offsets, to center airfoil+vectors in plot area
       XRANGE = MAX(1.0E-9, XMAX-XMIN)
       YRANGE = MAX(1.0E-9, YMAX-YMIN)
+
       GSF = MIN( 1.0/XRANGE , PLOTAR/YRANGE )
       XOFG = XMIN - 0.5*(1.0   -GSF*XRANGE)/GSF - 0.05/GSF
       YOFG = YMIN - 0.5*(PLOTAR-GSF*YRANGE)/GSF - 0.05/GSF
@@ -1195,6 +1211,149 @@ C
       CALL PLFLUSH
       RETURN
       END ! CPVEC
+
+
+
+      SUBROUTINE CPVECI
+C-------------------------------------------------------
+C     Plots airfoil with normal pressure force vectors.
+C-------------------------------------------------------
+      INCLUDE 'XFOIL.INC'
+C
+
+ 2000 format(
+     & /'Begin %I MLine'
+     & /'%I b 65535'
+     & /'0 0 0 [] 0 SetB'
+     & /'%I cfg Black'
+     & /'0 0 0 SetCFg'
+     & /'%I cbg White'
+     & /'1 1 1 SetCBg'
+     & /'none SetP %I p n'
+     & /'%I t'
+     & /'[ 0.1 -0 -0 0.1 0 0 ] concat'
+     & /'%I', i3)
+
+ 2100 format(1x,2i9)
+
+ 3000 format(
+     &  i3,' MLine'
+     & /'%I 1'
+     & /'End' )
+
+
+      DO 2 I=1, N
+        W1(I) = X(I)
+        W2(I) = Y(I)
+ 2    CONTINUE
+C
+      CALL ROTATE(W1,W2,N,ALFA)
+      CALL NCALC(W1,W2,S,N,W3,W4)
+C
+C---- set geometric limits
+      XMIN = W1(1)
+      XMAX = W1(1)
+      YMIN = W2(1)
+      YMAX = W2(1)
+      DO 5 I=1, N
+        XMIN = MIN(XMIN,W1(I))
+        XMAX = MAX(XMAX,W1(I))
+        YMIN = MIN(YMIN,W2(I))
+        YMAX = MAX(YMAX,W2(I))
+ 5    CONTINUE
+C
+      vfaci = 0.08
+
+C---- set pressure vector scale VSF
+      XRANGE = MAX(1.0E-9, XMAX-XMIN)
+      YRANGE = MAX(1.0E-9, YMAX-YMIN)
+      VSF = VFACI / MIN( 1.0/XRANGE , PLOTAR/YRANGE )
+C
+C
+C---- set limits again, including pressure vectors
+      DO 8 I=1, N
+        IF(     LVISC) CP = CPV(I)
+        IF(.NOT.LVISC) CP = CPI(I)
+        DX = ABS(CP)*VSF*W3(I)
+        DY = ABS(CP)*VSF*W4(I)
+        XMIN = MIN(XMIN,W1(I)+DX)
+        XMAX = MAX(XMAX,W1(I)+DX)
+        YMIN = MIN(YMIN,W2(I)+DY)
+        YMAX = MAX(YMAX,W2(I)+DY)
+ 8    CONTINUE
+C
+      write(*,*) xmin, xmax
+      write(*,*) ymin, ymax
+      write(*,*) 'enter xmin,xmax, ymin,ymax'
+      read(*,*) xmin,xmax, ymin,ymax
+
+C---- set scale, offsets, to center airfoil+vectors in plot area
+      XRANGE = MAX(1.0E-9, XMAX-XMIN)
+      YRANGE = MAX(1.0E-9, YMAX-YMIN)
+
+      GSF = MIN( 1.0/XRANGE , PLOTAR/YRANGE )
+      gsfi = gsf * 10000.0
+
+      XOFG = XMIN - 0.5*(1.0   -GSF*XRANGE)/GSF - 0.05/GSF
+      YOFG = YMIN - 0.5*(PLOTAR-GSF*YRANGE)/GSF - 0.05/GSF
+C
+      CALL PLTINI
+C
+      CALL NEWPEN(2)
+      CALL PLOT((W1(1)-XOFG)*GSF,(W2(1)-YOFG)*GSF,3)
+      DO 10 I=2, N
+        CALL PLOT((W1(I)-XOFG)*GSF,(W2(I)-YOFG)*GSF,2)
+   10 CONTINUE
+C
+
+      lu = 1
+
+      write(lu,2000) n
+      do i = 1, n
+        write(lu,2100) INT((W1(I)-XOFG)*GSFI), INT((W2(I)-YOFG)*GSFI)
+      enddo
+      write(lu,3000) n
+
+
+      DO 20 I=2, N-1
+        IF(     LVISC) CP = CPV(I)
+        IF(.NOT.LVISC) CP = CPI(I)
+        DX = -CP*VSF*W3(I)*GSFI
+        DY = -CP*VSF*W4(I)*GSFI
+        XL = (W1(I)-XOFG)*GSFI
+        YL = (W2(I)-YOFG)*GSFI
+        IF(CP.LT.0.0) THEN
+         X0 = XL
+         Y0 = YL
+        ELSE
+         X0 = XL - DX
+         Y0 = YL - DY
+        ENDIF
+        X1 = X0 + 0.85*DX + 0.02*DY
+        Y1 = Y0 + 0.85*DY - 0.02*DX
+        X2 = X0 + 0.85*DX - 0.02*DY
+        Y2 = Y0 + 0.85*DY + 0.02*DX
+        write(lu,2000) 5
+        write(lu,2100) INT(x0), INT(y0)
+        write(lu,2100) INT(x0+dx), INT(y0+dy)
+        write(lu,2100) INT(x1), INT(y1)
+        write(lu,2100) INT(x2), INT(y2)
+        write(lu,2100) INT(x0+dx), INT(y0+dy)
+        write(lu,3000) 5
+
+      CALL PLOT(X0*gsf/gsfi,Y0*gsf/gsfi,3)
+      CALL PLOT((X0+DX)*gsf/gsfi,(Y0+DY)*gsf/gsfi,2)
+      CALL PLOT(X1*gsf/gsfi,Y1*gsf/gsfi,2)
+      CALL PLOT(X2*gsf/gsfi,Y2*gsf/gsfi,2)
+      CALL PLOT((X0+DX)*gsf/gsfi,(Y0+DY)*gsf/gsfi,2)
+
+
+   20 CONTINUE
+
+      CALL PLFLUSH
+C
+      RETURN
+      END ! CPVECI
 
 
       SUBROUTINE PPAPLT(NPPAI,IPPAI)

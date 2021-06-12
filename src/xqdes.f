@@ -193,7 +193,7 @@ C
 C--------------------------------------------------------
 C---- toggle Qvis plotting flag
       ELSEIF(COMAND.EQ.'VISC' .OR.
-     &       COMAND.EQ.'V   '      ) THEN
+     &       COMAND.EQ.'V   ') THEN
        LQVDES = .NOT.LQVDES
        IF(LQVDES) THEN
         WRITE(*,*) 'Qspec & Qvis will be plotted'
@@ -260,7 +260,7 @@ C----- get the user's modifying input
      &             XSP,YSP,YSPD, LQSLOP,
      &             ISP1,ISP2,ISMOD,KQSP,
      &             XBOX,YBOX, XBOX,YBOX,SIZE,
-     &             XOFF,YOFF,XSF,YSF, 'RED',' ',
+     &             XOFF,YOFF,XSF,YSF, 'RED','RED',
      &             NEWPLOTQ )
 C
 C----- put modified info back into global arrays
@@ -563,8 +563,10 @@ C----------------------------------------------
       LOGICAL LAIR
 C
 C---- number of x/c grid lines
-      PARAMETER (NG=10,NQ=20)
-      DIMENSION SSPG(-NG:NG), SLPG(-NG:NG), QSPG(-NQ:NQ)
+      PARAMETER (NG=10,NQ=100)
+      REAL SSPG(-NG:NG), SLPG(-NG:NG),
+     &     XSPG(-NG:NG)
+      REAL QSPG(-NQ:NQ)
       DATA LMASK1, LMASK2, LMASK3 / -32640, -30584, -21846 /
 C
       INCLUDE 'XDES.INC'
@@ -577,7 +579,8 @@ C---- make room for airfoil plot if complex-mapping routine is being used
       LAIR = NSP .EQ. NC1
 C
 C---- speed annotation increment
-      DQANN = 0.5
+      DQANN  = 0.5
+      DQANN2 = 0.1
 C
 C---- find max and min speeds for current Qgamm and Qspec
       QMIN = QGAMM(1)
@@ -602,7 +605,7 @@ C---- round up to bounding annotations
       NMAX = INT(QMAX/DQANN) + 1
 C
       IF(LQREFL) THEN
-C----- set limits so reflectes Qspec(s) also fits on plot
+C----- set limits so reflected Qspec(s) also fits on plot
        NMAX = MAX( ABS(NMIN) , ABS(NMAX) )
        NMIN = -NMAX
       ENDIF
@@ -640,6 +643,7 @@ C
         SSP = SSPLE + (SSPEC(1)-SSPLE)*XOC
         CALL SINVRT(SSP,XOC,XSPOC,W7,SSPEC,NSP)
         SSPG(IG) = XMOD(1.0-SSP)
+        XSPG(IG) = XOC
 C
         XOC = 0.1*FLOAT(IG)/FLOAT(NG)
         SSP = SSPLE + (SSPEC(1)-SSPLE)*XOC
@@ -647,6 +651,7 @@ C
         SLPG(IG) = XMOD(1.0-SSP)
    11 CONTINUE
 C
+      XSPG(0) = 0.0
       SSPG(0) = XMOD(1.0-SSPLE)
       SLPG(0) = XMOD(1.0-SSPLE)
 C
@@ -655,6 +660,7 @@ C
         SSP = SSPLE + (SSPEC(NSP)-SSPLE)*XOC
         CALL SINVRT(SSP,XOC,XSPOC,W7,SSPEC,NSP)
         SSPG(IG) = XMOD(1.0-SSP)
+        XSPG(IG) = XOC
 C
         XOC = 0.1*FLOAT(-IG)/FLOAT(NG)
         SSP = SSPLE + (SSPEC(NSP)-SSPLE)*XOC
@@ -679,7 +685,7 @@ C---- plot sonic lines if within range
      &  CALL DASH(XMOD(0.0),XMOD(1.0),YMOD(-QFAC*QSTAR/QINF))
 C
 C---- annotate axes
-      DO 20 NT=NMIN, NMAX
+      DO 20 NT = NMIN, NMAX
         YPLT = QFAC*(QMAX-QMIN)*FLOAT(NT)/FLOAT(NMAX-NMIN)
 ccc        IF(MOD(NT,2).EQ.0) THEN
          RNUM = DQANN*FLOAT(NT)
@@ -690,8 +696,11 @@ ccc        IF(MOD(NT,2).EQ.0) THEN
          CALL PLNUMB(XNUM,YNUM,CHQ,RNUM,0.0,1)
 ccc        ENDIF
 C
-        QSPG(NT) = YMOD(0.0)
-        IF(IABS(NT).LE.NQ) QSPG(NT) = YMOD(YPLT)
+        IF(IABS(NT).LE.NQ) THEN
+         QSPG(NT) = YMOD(YPLT)
+        ELSE
+         QSPG(NT) = YMOD(0.0)
+        ENDIF
 C
         CALL NEWPEN(1)
         CALL PLOT(XMOD(0.0)        ,YMOD(YPLT),3)
@@ -701,7 +710,7 @@ C
    20 CONTINUE
 C
       XPLT = 0.5*(SSPG(NG-2)+SSPG(NG-3)) - 1.8*CHQ
-      CALL PLCHAR(XPLT,YMOD(0.0)-2.0*CHQ,1.2*CHQ,'x/c',0.0,3)
+      CALL PLCHAR(XPLT,YMOD(0.0)-3.0*CHQ,1.2*CHQ,'x/c',0.0,3)
 C
       YPLT = QFAC*(QMAX-QMIN)*(FLOAT(NMAX)-1.5)/FLOAT(NMAX-NMIN)
       CALL PLCHAR(XMOD(0.0)-4.8*CHQ,YMOD(YPLT)-0.6*CHQ,
@@ -715,6 +724,13 @@ C
         CALL PLOT(SSPG(IG),QSPG(0)-0.20*CHQ,2)
         CALL PLOT(SLPG(IG),QSPG(0)+0.15*CHQ,3)
         CALL PLOT(SLPG(IG),QSPG(0)-0.15*CHQ,2)
+        IF    (IG.LT.0) THEN
+         CALL PLNUMB(SSPG(IG)-0.9*CHQ,
+     &               QSPG(0) +0.5*CHQ,0.7*CHQ,XSPG(IG),0.,1)
+        ELSEIF(IG.GT.0) THEN
+         CALL PLNUMB(SSPG(IG)-0.9*CHQ,
+     &               QSPG(0) -1.3*CHQ,0.7*CHQ,XSPG(IG),0.,1)
+        ENDIF
    21 CONTINUE
 C
       INCR = MAX((2*NG)/4,1)
@@ -735,31 +751,57 @@ C
 C
 C
       IF(LQGRID) THEN
-        DO 30 K=1, NG
+C---- grid lines in X and Q
+        DO K=1, NG
           W1(K) = SSPG(K-NG) - SSPG(K-1-NG)
           W2(K) = SSPG(K)    - SSPG(K-1)
           W6(K) = SLPG(K-NG) - SLPG(K-1-NG)
           W7(K) = SLPG(K)    - SLPG(K-1)
-   30   CONTINUE
-        DO 33 K=1, -NMIN
+        END DO
+        DO K=1, -NMIN
           W3(K) = QSPG(K+NMIN) - QSPG(K-1+NMIN)
-   33   CONTINUE
-        DO 34 K=1, NMAX
+        END DO
+        DO K=1, NMAX
           W4(K) = QSPG(K)      - QSPG(K-1)
-   34   CONTINUE
-C
+        END DO
         CALL NEWPEN(1)
         CALL PLGRID(SSPG(-NG),QSPG(NMIN),1000+NG,W1,1000-NMIN,W3,LMASK2)
         CALL PLGRID(SSPG(0)  ,QSPG(0)   ,1000+NG,W2,1000+NMAX,W4,LMASK2)
-cc        CALL PLGRID(SLPG(-NG),QSPG(NMIN),1000+NG,W6,1000-NMIN,W3,LMASK1)
-cc        CALL PLGRID(SLPG(0)  ,QSPG(0)   ,1000+NG,W7,1000+NMAX,W4,LMASK1)
+C
+C---- Intermediate fine grid lines in Q
+        NFINE = IFIX(DQANN/DQANN2+0.5) + 1
+        NMIN2 = NMIN*NFINE
+        NMAX2 = NMAX*NFINE
+        IF(NMIN2 .LT. -NQ .OR. NMAX2 .GT. NQ) THEN
+         NFINE = 2
+         NMIN2 = MAX( NMIN*NFINE , -NQ )
+         NMAX2 = MIN( NMAX*NFINE ,  NQ )
+        ENDIF
+
+        DO NT = NMIN2, NMAX2
+          YPLT = QFAC*(QMAX-QMIN)*FLOAT(NT)/FLOAT(NMAX2-NMIN2)
+          QSPG(NT) = YMOD(YPLT)
+        END DO
+        DO K=1, -NMIN2
+          W3(K) = QSPG(K+NMIN2) - QSPG(K-1+NMIN2)
+        END DO
+        DO K=1, NMAX2
+          W4(K) = QSPG(K)      - QSPG(K-1)
+        END DO
+        CALL NEWPEN(1)
+        CALL PLGRID(SSPG(-NG),QSPG(NMIN2),1000+NG,W1,
+     &              1000-NMIN2,W3,LMASK1)
+        CALL PLGRID(SSPG(0)  ,QSPG(0)   ,1000+NG,W2,
+     &              1000+NMAX2,W4,LMASK1)
+C
+c        CALL PLGRID(SLPG(-NG),QSPG(NMIN),1000+NG,W6,1000-NMIN,W3,LMASK1)
+c        CALL PLGRID(SLPG(0)  ,QSPG(0)   ,1000+NG,W7,1000+NMAX,W4,LMASK1)
       ENDIF
 C
       CALL PLFLUSH
 C
       RETURN
       END
-
 
 
 

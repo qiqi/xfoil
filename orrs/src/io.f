@@ -62,7 +62,7 @@ C
         CALL READOS1(FNAME,IFORM,
      &               N(IH),NMAX,ETA(1,IH),U(1,IH),S(1,IH),
      &               NRP(IH),NWP(IH),
-     &               RTL(1,IH),WSL(1,IH),HH, AR(1,1,IH),AI(1,1,IH),
+     &               RTL(1,IH),WSL(1,IH),HH(IH), AR(1,1,IH),AI(1,1,IH),
      &               NRX,NWX)
 C
  1000 CONTINUE
@@ -139,7 +139,7 @@ C
         CALL WRITOS1(FNAME,IFORM,
      &               N(IH),NMAX,ETA(1,IH),U(1,IH),S(1,IH),
      &               NRP(IH),NWP(IH),
-     &               RTL(1,IH),WSL(1,IH),HH, AR(1,1,IH),AI(1,1,IH),
+     &               RTL(1,IH),WSL(1,IH),HH(IH), AR(1,1,IH),AI(1,1,IH),
      &               NRX,NWX)
 C
  1000 CONTINUE
@@ -265,10 +265,13 @@ C
  30   CONTINUE
       CLOSE(9)
       GEO = (ETA(3)-ETA(2)) / (ETA(2)-ETA(1))
-      WRITE(*,2050) N, HH, ETA(N), GEO
+      WRITE(*,2050) N, HH, ETA(N), GEO, 
+     &              RTL(1), RTL(NRP), WSL(1), WSL(NWP)
  2050 FORMAT(' n =', I4,'   H =', F7.3,
      &                  '   Ye =', F7.3,
-     &                  '   dYi+1/dYi =',F6.3 /)
+     &                  '   dYi+1/dYi =',F6.3,
+     &                  '   Rt1 Rtn =', 2g12.4,
+     &                  '   Wl1 Wln =', 2g12.4 /)
       IFORM = 1
 C
 C

@@ -134,6 +134,9 @@ C    eliminate extra duplicates (more than one duplicate point) elsewhere
       DIMENSION S(KK), W(KK)
       LOGICAL DONE
 C
+ 5    CONTINUE
+      DONE = .TRUE.
+
 C---- Check first elements for dups
       IF(S(2).EQ.S(1)) THEN
         DO N=1, KK-1
@@ -141,6 +144,7 @@ C---- Check first elements for dups
           W(N) = W(N+1)
         END DO
         KK = KK - 1
+        DONE = .FALSE.
       ENDIF
 C
 C---- Check last elements for dups
@@ -148,10 +152,12 @@ C---- Check last elements for dups
         S(KK-1) = S(KK)
         W(KK-1) = W(KK)
         KK = KK - 1
+        DONE = .FALSE.
       ENDIF
 C
 C--- Eliminate more than 2 succeeding identical elements 
- 10   DO N=1, KK-2
+ 10   CONTINUE
+      DO N = 1, KK-2
         IF(S(N).EQ.S(N+1) .AND. S(N).EQ.S(N+2)) THEN
           DO I = N, KK-1
            S(I) = S(I+1)
@@ -162,8 +168,14 @@ C--- Eliminate more than 2 succeeding identical elements
         ENDIF
       END DO
 C
-      RETURN
-      END
+      IF(DONE) THEN
+       RETURN
+      ELSE
+       GO TO 5
+      ENDIF
+
+      END ! FIXDUP
+
 
 
       SUBROUTINE SORT(KK,S,W)

@@ -30,7 +30,7 @@ C***********************************************************************
       LOGICAL ERROR
       CHARACTER*(*) CODE
       REAL CPOL(NAX,IPTOT), CPOLSD(NAX,ISX,JPTOT)
-      REAL MACH1, XTRIP(ISX)
+      REAL MACH1, ACRIT(ISX), XTRIP(ISX)
 C--------------------------------------------------------
 C     Reads in polar save file
 C
@@ -64,10 +64,10 @@ C--------------------------------------------------------
       CHARACTER*1 DUMMY
       REAL RINP(0:IPTOT+2*JPTOT)
 C
-      INTEGER IPOL(IPTOT), ISPOL(2,JPTOT)
+      INTEGER IPOL(IPTOT), ISPOL(2,IPTOT)
       INTEGER ITMP(IPTOT+2*JPTOT), ITMP0(IPTOT+2*JPTOT)
       LOGICAL LOPEN, LHEAD, LDLAB
-      LOGICAL LIRE, LIMA, LINC, LJTP
+      LOGICAL LIRE, LIMA, LJNC, LJTP
       CHARACTER*20 CPNAME
 C
 C
@@ -240,7 +240,17 @@ C
 C--------------------------------------------
        K = INDEX(LINE,'Ncrit =')
        IF(K.NE.0) THEN
-        READ(LINE(K+7:128),*,ERR=33) ACRIT
+        NINP = 2
+        CALL GETFLT(LINE(k+7:128),RINP(1),NINP,ERROR)
+        IF(NINP.LE.0 .OR. ERROR) GO TO 33
+C
+        IF(NINP.EQ.1) THEN
+         ACRIT(1) = RINP(1)
+         ACRIT(2) = RINP(1)
+        ELSE
+         ACRIT(1) = RINP(1)
+         ACRIT(2) = RINP(2)
+        ENDIF
  33     CONTINUE
         LDLAB = .FALSE.
        ENDIF
@@ -351,12 +361,12 @@ C
 C----- try to find Re, Ma, Ncrit, Xtrip  in polar data
        LIRE = .FALSE.
        LIMA = .FALSE.
-       LINC = .FALSE.
+       LJNC = .FALSE.
        LJTP = .FALSE.
        DO KP = 1, NIPOL
          IF(IPOL(KP) .EQ. IRE) LIRE = .TRUE.
          IF(IPOL(KP) .EQ. IMA) LIMA = .TRUE.
-         IF(IPOL(KP) .EQ. INC) LINC = .TRUE.
+         IF(ISPOL(1,KP) .EQ. JNC) LJNC = .TRUE.
          IF(ISPOL(1,KP) .EQ. JTP) LJTP = .TRUE.
        ENDDO
 C
@@ -382,9 +392,11 @@ C------ Mach was not in polar data... set using header info
         ENDIF
        ENDIF
 C
-       IF(.NOT. LINC) THEN
+       IF(.NOT. LJNC) THEN
 C------ Ncrit was not in polar data... set using header info
-        CPOL(IA,INC) = ACRIT
+        DO IS = 1, 2*NBL
+          CPOLSD(IA,IS,JNC) = ACRIT(IS)
+        ENDDO
        ENDIF
 C
        IF(.NOT. LJTP) THEN
@@ -429,7 +441,7 @@ C..........................................
       LOGICAL ERROR, LHEAD,LQUERY
       CHARACTER*(*) CODE
       REAL CPOL(NAX,IPTOT), CPOLSD(NAX,ISX,JPTOT)
-      REAL MACH1, XTRIP(ISX)
+      REAL MACH1, ACRIT(ISX), XTRIP(ISX)
       INTEGER IPOL(IPTOT), JPOL(JPTOT)
 C--------------------------------------------------------
 C     Writes polar save file
@@ -545,7 +557,7 @@ C
           WRITE(LU,9012) XTRIP(IS1), XTRIP(IS2), N
          ENDIF
        ENDDO
-       WRITE(LU,9015) MACH1, REYN1/1.0E6, ACRIT
+       WRITE(LU,9015) MACH1, REYN1/1.0E6, ACRIT(1), ACRIT(2)
        IF(PTRAT .NE. 0.0) WRITE(LU,9017) PTRAT, ETAP
        WRITE(LU,*) ' '
 C
@@ -663,7 +675,7 @@ C
       RETURN
 C
  95   CONTINUE
-      WRITE(*,*) '? Bad format specification in PINDEX.INC'
+      WRITE(*,*) '? Bad CPOLFORM set up in PINDEX.INC'
       STOP
 C
 C......................................................................
@@ -677,7 +689,7 @@ C......................................................................
  9012 FORMAT(1X,
      &'xtrf = ',F7.3,' (top)    ',F9.3,' (bottom)     element', I3)
  9015 FORMAT(1X,
-     &'Mach = ',F7.3,5X,'Re = ',F9.3,' e 6',5X,'Ncrit = ',F7.3)
+     &'Mach = ',F7.3,5X,'Re = ',F9.3,' e 6',5X,'Ncrit = ',20F7.3)
  9017 FORMAT(1X,
      &'pi_p = ',F7.4,5X,'eta_p = ',F9.4)
  9100 FORMAT(1X,F7.3,F9.4,2F10.5,F9.4,2F8.4  ,  F9.5)

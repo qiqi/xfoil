@@ -26,7 +26,7 @@ C
 C
       CHARACTER*128 COMARG, ARGOLD, LINE
 C
-      PARAMETER (NPRX = 101)
+      PARAMETER (NPRX = 1001)
       DIMENSION XPR(NPRX), YPR(NPRX), FPR(NPRX)
 C
       DIMENSION NBLP(NPX)
@@ -114,7 +114,7 @@ C
 C---- don't try to read integers, since might get integer overflow
       DO I=1, NINPUT
         IF(ABS(RINPUT(I)) .GT. 2.1E9) THEN
-         IINPUT(I) = 2**31
+         IINPUT(I) = 2**30
         ELSE
          IINPUT(I) = INT(RINPUT(I))
         ENDIF
@@ -160,6 +160,7 @@ C--------------------------------------------------------
      &//'   RGET f   Read new reference polar from file'
      & /'   RDEL i   Delete stored reference polar'
      &//'   GRID     Toggle Cp vs x grid overlay'
+     & /'   CPIO     Toggle inviscid Cp overlay on viscous Cp(x)'
      & /'   CREF     Toggle reference Cp data overlay'
      & /'   FREF     Toggle reference CL,CD.. data display'
      &//'   CPx      Plot Cp vs x'
@@ -841,7 +842,7 @@ C
         LU = 17
         CALL POLREAD(LU,FNAME,ERROR,
      &             NAX,NAPOL(IP),CPOL(1,1,IP), 
-     &             REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &             REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &             PTRATP(IP),ETAPP(IP),
      &             NAMEPOL(IP),IRETYP(IP),IMATYP(IP),
      &             ISX,NBLP(IP),CPOLSD(1,1,1,IP),
@@ -855,7 +856,7 @@ C
          NEL = 1
          CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &             NAX, 1,NAPOL(IP), CPOL(1,1,IP), IPOL,NIPOL,
-     &             REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &             REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &             PTRATP(IP),ETAPP(IP),
      &             NAMEPOL(IP),IRETYP(IP),IMATYP(IP),
      &             ISX,NEL,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -916,7 +917,7 @@ C
 C
           CALL POLWRIT(LU,FNAME,ERROR, .TRUE.,
      &      NAX, 1,NAPOL(IP),CPOL(1,1,IP), IPOL,NIPOL,
-     &      REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &      REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &      PTRATP(IP),ETAPP(IP),
      &      NAMEPOL(IP),IRETYP(IP),IMATYP(IP),
      &      ISX,NEL,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -1068,7 +1069,7 @@ C
           IA2 = NAPOL(IP)
           CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &                 NAX, IA1,IA2, CPOL(1,1,IP), IPOL,NIPOL,
-     &                 REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &                 REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &                 PTRATP(IP),ETAPP(IP),
      &                 NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &                 ISX,NEL,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -1335,7 +1336,7 @@ C
         IA2 = NAPOL(IP)
         CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &                 NAX, IA1,IA2, CPOL(1,1,IP), IPOL,NIPOL,
-     &                 REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &                 REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &                 PTRATP(IP),ETAPP(IP),
      &                 NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &                 ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -1434,7 +1435,7 @@ C
        IA2 = -1
        CALL POLWRIT(6,' ',ERROR, .TRUE.,
      &                NAX, IA1,IA2, CPOL(1,1,IP), IPOL,NIPOL,
-     &                REYNP1(IP),MACHP1(IP),ACRITP(IP),XSTRIPP(1,IP),
+     &                REYNP1(IP),MACHP1(IP),ACRITP(1,IP),XSTRIPP(1,IP),
      &                PTRATP(IP),ETAPP(IP),
      &                NAMEPOL(IP), IRETYP(IP),IMATYP(IP),
      &                ISX,1,CPOLSD(1,1,1,IP), JPOL,NJPOL,
@@ -1487,8 +1488,21 @@ C--------------------------------------------------------
        ENDIF
 C
 C--------------------------------------------------------
+      ELSEIF(COMAND.EQ.'CPIO') THEN
+       LCPINV = .NOT.LCPINV
+       IF(LCPINV) THEN
+        WRITE(*,*) 'Inviscid Cp overlay enabled'
+       ELSE
+        WRITE(*,*) 'Inviscid Cp overlay disabled'
+       ENDIF
+C
+C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'CPV ') THEN
        CALL CPVEC
+C
+C--------------------------------------------------------
+      ELSEIF(COMAND.EQ.'CPVI') THEN
+       CALL CPVECI
 C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'BL  ') THEN
@@ -1592,7 +1606,8 @@ C--------------------------------------------------------
        IF(NINPUT.GE.1) THEN
         UPRWT = RINPUT(1)
        ELSE
-        WRITE(*,*) 'Current u/Qinf profile plot weight =', UPRWT
+        WRITE(*,7730) UPRWT
+ 7730   FORMAT(/1X,'Current u/Qinf profile plot weight =', G12.4)
         CALL ASKR('Enter new plot weight^',UPRWT)
        ENDIF
 C
@@ -1650,6 +1665,10 @@ C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'DUMP') THEN
        CALL BLDUMP(COMARG)
+
+C--------------------------------------------------------
+      ELSEIF(COMAND.EQ.'DMP ') THEN
+       CALL BLDUMP2(COMARG)
 C
 C--------------------------------------------------------
       ELSEIF(COMAND.EQ.'CPWR') THEN
@@ -1683,7 +1702,7 @@ C--------------------------------------------------------
         IF(.NOT.LFLAP) THEN
          WRITE(*,*)
          WRITE(*,*) 'Note: Flap hinge location not defined'
-         WRITE(*,*) '      Set it with FNEW command'
+         WRITE(*,*) '      Set it with FNEW,FMOM commands'
         ENDIF
        ELSE 
         WRITE(*,*) 'Hinge moment won''t be written to polar save file'
@@ -1890,7 +1909,7 @@ C
        DELIM = ' '
       ENDIF
 C
- 1000 FORMAT(50A)
+ 1000 FORMAT(20(A))
 C
       IF(FNAME1(1:1).NE.' ') THEN
        FNAME = FNAME1
@@ -1918,6 +1937,7 @@ C
        WRITE(LU,1000)
      & '#    s        x        y     Ue/Vinf    Dstar     Theta ',
      & '     Cf       H'
+     &,'       H*        P         m          K          tau         Di'
 C         1.23456  0.23451  0.23451  0.23451  0.012345  0.001234  0.004123  10.512
       ELSE
        WRITE(LU,1000)
@@ -1946,17 +1966,23 @@ C
           ENDIF
           DS = DSTR(IBL,IS)
           TH = THET(IBL,IS)
+          TS = TSTR(IBL,IS)
           CF =  TAU(IBL,IS)/(0.5*QINF**2)
+          CDIS = DIS(IBL,IS)/(QINF**3)
           IF(TH.EQ.0.0) THEN
            H = 1.0
+           HS = 1.0
           ELSE
-           H = DS/TH
+           H  = DS/TH
+           HS = TS/TH
           ENDIF
         ELSE
           DS = 0.
           TH = 0.
+          TS = 0.
           CF = 0.
           H = 1.0
+          HS = 2.0
         ENDIF
         UE = (GAM(I)/QINF)*(1.0-TKLAM) / (1.0 - TKLAM*(GAM(I)/QINF)**2)
         AMSQ = UE*UE*HSTINV / (GAMM1*(1.0 - 0.5*UE*UE*HSTINV))
@@ -1964,7 +1990,10 @@ C
 C
         IF(KDELIM.EQ.0) THEN
          WRITE(LU,8500) S(I), X(I), Y(I), UE, DS, TH, CF, HK
- 8500    FORMAT(1X, 4F9.5, 3F10.6, F10.3)
+     &    , HS, TH*UE**2, DS*UE, TS*UE**3
+c    &     TAU(IBL,IS), DIS(IBL,IS), cdis
+ 8500    FORMAT(1X, 4F9.5, 3F10.6, F10.4, 
+     &       f10.4, 3f9.5, 2f10.6, f10.6 )
 C
         ELSE
          WRITE(LINE,8510) 
@@ -1976,7 +2005,7 @@ C
      &     TH  ,DELIM,
      &     CF  ,DELIM,
      &     HK
- 8510    FORMAT(1X, 4(F9.5,A), 3(F10.6,A), F10.3)
+ 8510    FORMAT(1X, 4(F9.5,A), 3(F10.6,A), F10.4)
          CALL BSTRIP(LINE,NLINE)
          WRITE(LU,1000) LINE(1:NLINE)
         ENDIF
@@ -2018,6 +2047,218 @@ C
       CLOSE(LU)
       RETURN
       END ! BLDUMP
+
+
+
+      SUBROUTINE BLDUMP2(FNAME1)
+      INCLUDE 'XFOIL.INC'
+      CHARACTER*(*) FNAME1
+C
+      CHARACTER*80 FILDEF
+C
+      CHARACTER*1 DELIM
+      CHARACTER*256 LINE
+C
+      REAL PTAU(IVX,ISX), EDIS(IVX,ISX)
+C
+      IF    (KDELIM.EQ.0) THEN
+       DELIM = ' '
+      ELSEIF(KDELIM.EQ.1) THEN
+       DELIM = ','
+      ELSEIF(KDELIM.EQ.2) THEN
+       DELIM = CHAR(9)
+      ELSE
+       WRITE(*,*) '? Illegal delimiter.  Using blank.'
+       DELIM = ' '
+      ENDIF
+C
+ 1000 FORMAT(20(A))
+C
+      IF(FNAME1(1:1).NE.' ') THEN
+       FNAME = FNAME1
+      ELSE
+C----- no argument... get it somehow
+       IF(NPREFIX.GT.0) THEN
+C------ offer default using existing prefix
+        FILDEF = PREFIX(1:NPREFIX) // '.bl'
+        WRITE(*,1100) FILDEF
+ 1100   FORMAT(/' Enter filename:  ', A)
+        READ(*,1000) FNAME
+        CALL STRIP(FNAME,NFN)
+        IF(NFN.EQ.0) FNAME = FILDEF
+       ELSE
+C------ nothing available... just ask for filename
+        CALL ASKS('Enter filename^',FNAME)
+       ENDIF
+      ENDIF
+C
+      LU = 19
+      OPEN(LU,FILE=FNAME,STATUS='UNKNOWN')
+      REWIND(LU)
+C
+      WRITE(LU,1000)
+     & '#    s        x        y      Ue/Vinf ',
+     & '   Dstar      Theta      Tstar',
+     & '       Cf         CD         H         H*  ', 
+     & '       m          P         Pf        Pp         K/2  ',
+     & '       tau       Diss    -m du/ds    dP/ds      DV    ',
+     & '     dm/ds     N     Rtheta'
+      WRITE(LU,1000)
+     & '#    1        2        3        4     ',
+     & '     5          6          7  ',
+     & '        8         9          10        11  ',
+     & '       12         13        14        15         16   ',
+     & '       17         18        19        20        21    ',
+     & '      22      23      24   '
+C         1.23456  0.23451  0.23451  0.23451  0.012345  0.001234  0.004123  10.512
+C
+      CALL COMSET
+      HSTINV = GAMM1*(MINF/QINF)**2 / (1.0 + 0.5*GAMM1*MINF**2)
+C
+      DO 10 IS = 1, 2
+        IBL = 1
+        PTAU(IBL,IS) = 0.
+        EDIS(IBL,IS) = 0.
+        DO IBL = 2, IBLTE(IS)
+          DXSSI = XSSI(IBL,IS) - XSSI(IBL-1,IS)
+          TAUA =  (TAU(IBL,IS) +  TAU(IBL-1,IS))*0.5
+          DISA =  (DIS(IBL,IS) +  DIS(IBL-1,IS))*0.5
+          PTAU(IBL,IS) = PTAU(IBL-1,IS) + TAUA*DXSSI
+          EDIS(IBL,IS) = EDIS(IBL-1,IS) + DISA*DXSSI
+        ENDDO
+ 10   CONTINUE
+      IS = 2
+      IBL = IBLTE(IS)+1
+      PTAU(IBL,IS) = PTAU(IBLTE(1),1) + PTAU(IBLTE(2),2)
+      EDIS(IBL,IS) = EDIS(IBLTE(1),1) + EDIS(IBLTE(2),2)
+      DO IBL = IBLTE(IS)+2, NBL(IS)
+        DXSSI = XSSI(IBL,IS) - XSSI(IBL-1,IS)
+        TAUA =  (TAU(IBL,IS) +  TAU(IBL-1,IS))*0.5
+        DISA =  (DIS(IBL,IS) +  DIS(IBL-1,IS))*0.5
+        PTAU(IBL,IS) = PTAU(IBL-1,IS) + TAUA*DXSSI
+        EDIS(IBL,IS) = EDIS(IBL-1,IS) + DISA*DXSSI
+      ENDDO
+C
+C
+      DO 20 IS = 1, 2
+      DO 210 IBL = 2, NBL(IS)
+        I = IPAN(IBL,IS)
+
+        IF(IBL.EQ.2) THEN
+         IBLM = IBL
+        ELSE
+         IBLM = IBL-1
+        ENDIF
+
+        IF(IBL.EQ.IBLTE(IS)) THEN
+         IBLP = IBL
+        ELSE
+         IBLP = IBL+1
+        ENDIF
+
+        IF(IS.EQ.2) THEN
+         IF(IBL.EQ.IBLTE(IS)+1) THEN
+          IBLM = IBL
+         ENDIF
+         IF(IBL.EQ.NBL(IS)) THEN
+          IBLP = IBL
+         ENDIF
+        ENDIF
+
+        XS = XSSI(IBL,IS)
+        IF(IS.EQ.2 .AND. IBL.GT.IBLTE(2)) THEN
+         XS = XS - XSSI(IBLTE(2),2) + XSSI(IBLTE(1),1)
+        ENDIF
+
+        IF(LIPAN .AND. LVISC) THEN
+          UE = UEDG(IBL,IS)
+          DS = DSTR(IBL,IS)
+          TH = THET(IBL,IS)
+          TS = TSTR(IBL,IS)
+          CF =  TAU(IBL,IS)/(0.5*QINF**2)
+          CDIS = DIS(IBL,IS)/(QINF**3)
+          PTAUI = PTAU(IBL,IS)
+          PPREI = TH*UE**2 - PTAUI
+          EDISI = EDIS(IBL,IS)
+          DPREI = 0.5*CPV(I)
+          DPREI = (1.0 - UE**2)*0.5
+          HAVG = 0.5*(DS/TH + 1.0)
+          SQFAC = UE**HAVG
+          IF(TH.EQ.0.0) THEN
+           H = 1.0
+           HS = 1.0
+          ELSE
+           H  = DS/TH
+           HS = TS/TH
+          ENDIF
+          AMSQ = UE*UE*HSTINV / (GAMM1*(1.0 - 0.5*UE*UE*HSTINV))
+          CALL HKIN( H, AMSQ, HK, DUMMY, DUMMY)
+          DUDS = (UEDG(IBLP,IS) - UEDG(IBLM,IS))
+     &         / (XSSI(IBLP,IS) - XSSI(IBLM,IS))
+          DMDS = (UEDG(IBLP,IS)*DSTR(IBLP,IS)
+     &          - UEDG(IBLM,IS)*DSTR(IBLM,IS) )
+     &         / (XSSI(IBLP,IS) - XSSI(IBLM,IS))
+          DK = HK*THET(IBL,IS)
+          CT = CTAU(IBL,IS)
+          RT = UE*TH*REINF
+        ELSE
+          UE = (GAM(I)/QINF)*(1.0-TKLAM)
+     &                     / (1.0-TKLAM*(GAM(I)/QINF)**2)
+          DS = 0.
+          TH = 0.
+          TS = 0.
+          CF = 0.
+          CDIS = 0.
+          PTAUI = 0.
+          PPREI = 0.
+          EDISI = 0.
+          DPREI = 0.
+          SQFAC = 1.0
+          H = 1.0
+          HS = 1.0
+          HK = 1.0
+          DUDS = 0.
+          DMDS = 0.
+          DK = 0.
+          CT = 0.
+          RT = 0.
+        ENDIF
+C
+        WRITE(LU,8500) 
+     &      XS, X(I), Y(I), UE,
+     &      DS, TH, TS,
+     &      CF, CDIS,  HK, HS,
+     &      DS*UE, TH*UE**2, PTAUI, PPREI, 0.5*TS*UE**3,
+     &      TAU(IBL,IS), DIS(IBL,IS), -UE*DS*DUDS,
+     &      TAU(IBL,IS)-UE*DS*DUDS,
+     &      TH*UE**2 - DPREI*DK,
+     &      DMDS,
+     &      CT,
+     &      RT
+ 8500    FORMAT(1X, 
+     &       4F9.5, 
+     &      3F11.7,
+     &      2F11.7, 2F10.4, 
+     &      5F11.7, 
+     &      4F11.7,
+     &       F11.7,
+     &       F11.7,
+     &       F11.7,
+     &       F11.3 )
+C
+        IF(IS.EQ.2 .AND. IBL.EQ.IBLTE(2)) THEN
+         WRITE(LU,*)
+        ENDIF
+ 210  CONTINUE
+      IF(IS.EQ.1) THEN
+        WRITE(LU,*)
+      ENDIF
+
+  20  CONTINUE
+C
+      CLOSE(LU)
+      RETURN
+      END ! BLDUMP2
 
 
 
@@ -2254,22 +2495,35 @@ C---------------------------------------------
       INCLUDE 'BLPAR.INC'
       CHARACTER*4 COMAND
       CHARACTER*128 COMARG
+      REAL TURB(ISX)
 C
       DIMENSION IINPUT(20)
       DIMENSION RINPUT(20)
       LOGICAL ERROR
 C
 C
- 10   TURB = 100.0 * EXP( -(ACRIT + 8.43)/2.4 )
-      WRITE(*,1200) XSTRIP(1), XSTRIP(2), ACRIT, TURB, VACCEL,
-     &              SCCON, DUXCON, GACON, GBCON, CTCON, CTRCON, CTRCEX
- 1200 FORMAT(/' Xtr/c     =', F8.4, '    top    side'
-     &       /' Xtr/c     =', F8.4, '    bottom side'
-     &       /' Ncrit     =', F8.2, '   (', F6.3, ' % turb. level )'
-     &       /' Vacc      =', F8.4,
-     &      //' Klag  =', F8.4,'     Uxwt  =', F8.2
-     &       /' A     =', F8.4,'     B     =', F8.4,'       KCt =', F8.5
-     &       /' CtiniK=', F8.4,'     CtiniX=', F8.4 )
+ 10   CONTINUE
+      TURB(1) = 100.0 * EXP( -(ACRIT(1) + 8.43)/2.4 )
+      TURB(2) = 100.0 * EXP( -(ACRIT(2) + 8.43)/2.4 )
+      WRITE(*,1200) XSTRIP(1),
+     &              XSTRIP(2),
+     &              ACRIT(1), TURB(1),
+     &              ACRIT(2), TURB(2),
+     &              VACCEL,
+     &              WAKLEN,
+     &              SCCON , DUXCON, DLCON,
+     &              GACON , GBCON , CTCON, 
+     &              CTRCON, CTRCEX
+ 1200 FORMAT(
+     &  /' Xtr/c     =', F8.4, '    top    side'
+     &  /' Xtr/c     =', F8.4, '    bottom side'
+     &  /' NcritT    =', F8.2, '   (', F6.3, ' % turb. level )'
+     &  /' NcritB    =', F8.2, '   (', F6.3, ' % turb. level )'
+     &  /' Vacc      =', F8.4,
+     &  /' WakeL/c   =', F8.3,
+     & //' Klag  =', F8.4,'     Uxwt  =', F8.2,'       Kdl =', F8.4
+     &  /' A     =', F8.4,'     B     =', F8.4,'       KCt =', F8.5
+     &  /' CtiniK=', F8.4,'     CtiniX=', F8.4 )
 C
 C======================================================================
 C---- start of user interaction loop
@@ -2295,12 +2549,15 @@ C--------------------------------------------------------------
  1050  FORMAT(
      &  /'   <cr>    Return to OPER menu'
      &  /'   SHOW    Display viscous parameters'
-     &  /'   XTR  rr Change trip positions Xtr/c'
+     &  /'   Xtr  rr Change trip positions Xtr/c'
      &  /'   N    r  Change critical amplification exponent Ncrit'
-     &  /'   VACC r  Change Newton solution acceleration parameter'
+     &  /'   NT   r  Change Ncrit on Top'
+     &  /'   NB   r  Change Ncrit on Bot'
+     &  /'   Vacc r  Change Newton solution acceleration parameter'
+     &  /'   Wake r  Change wake length/chord'
      &  /'   INIT    BL initialization flag toggle'
      & //'   LAG     change lag equation constants'
-     &  /'   GB      change G-beta constants'
+     &  /'   GB      change G-beta constants A,B'
      &  /'   CTR     change initial transition-Ctau constants'
      &  /'   REST    restore BL calibration to baseline')
 C
@@ -2309,7 +2566,8 @@ C--------------------------------------------------------------
        GO TO 10
 C
 C--------------------------------------------------------------
-      ELSEIF(COMAND.EQ.'XTR ') THEN
+      ELSEIF(COMAND.EQ.'XTR ' .OR.
+     &       COMAND.EQ.'X   ') THEN
        IF(LPACC .AND. LVISC) THEN
         WRITE(*,2100)
         GO TO 500
@@ -2329,20 +2587,63 @@ C--------------------------------------------------------------
         WRITE(*,2100)
         GO TO 500
        ENDIF
-       IF(NINPUT.GE.1) THEN
-        ACRIT = RINPUT(1)
+       IF    (NINPUT.GE.1) THEN
+        ACRIT(1) = RINPUT(1)
+        ACRIT(2) = RINPUT(1)
        ELSE
-        CALL ASKR('Enter critical amplification ratio^',ACRIT)
+        CALL ASKR('Enter critical amplification ratio^',ACRIT(1))
+        ACRIT(2) = ACRIT(1)
        ENDIF
        LVCONV = .FALSE.
 C
 C--------------------------------------------------------------
-      ELSEIF(COMAND.EQ.'VACC') THEN
+      ELSEIF(COMAND.EQ.'NT  ') THEN
+       IF(LPACC .AND. LVISC) THEN
+        WRITE(*,2100)
+        GO TO 500
+       ENDIF
+       IF(NINPUT.GE.1) THEN
+        ACRIT(1) = RINPUT(1)
+       ELSE
+        CALL ASKR('Enter top-surface critical amplification^',ACRIT(1))
+       ENDIF
+       LVCONV = .FALSE.
+C
+C--------------------------------------------------------------
+      ELSEIF(COMAND.EQ.'NB  ') THEN
+       IF(LPACC .AND. LVISC) THEN
+        WRITE(*,2100)
+        GO TO 500
+       ENDIF
+       IF(NINPUT.GE.1) THEN
+        ACRIT(2) = RINPUT(1)
+       ELSE
+        CALL ASKR('Enter bot-surface critical amplification^',ACRIT(2))
+       ENDIF
+       LVCONV = .FALSE.
+C
+C--------------------------------------------------------------
+      ELSEIF(COMAND.EQ.'VACC' .OR.
+     &       COMAND.EQ.'V   ') THEN
        IF(NINPUT.GE.1) THEN
         VACCEL = RINPUT(1)
        ELSE
         CALL ASKR('Enter viscous acceleration parameter^',VACCEL)
        ENDIF
+C
+C--------------------------------------------------------------
+      ELSEIF(COMAND.EQ.'WAKE' .OR.
+     &       COMAND.EQ.'W   ') THEN
+       WAKLEN0 = WAKLEN
+       IF(NINPUT.GE.1) THEN
+        WAKLEN = RINPUT(1)
+       ELSE
+        CALL ASKR('Enter wake length/chord^',WAKLEN)
+       ENDIF
+       LWAKE = .FALSE.
+       LBLINI = .FALSE.
+       LVCONV = .FALSE.
+       LIPAN = .FALSE.
 C
 C--------------------------------------------------------------
       ELSEIF(COMAND.EQ.'INIT') THEN
@@ -2357,12 +2658,14 @@ C--------------------------------------------------------------
         WRITE(*,2100)
         GO TO 500
        ENDIF
-       IF(NINPUT.GE.2) THEN
+       IF(NINPUT.GE.3) THEN
         SCCON  = RINPUT(1)
         DUXCON = RINPUT(2)
+        DLCON  = RINPUT(3)
        ELSE
         CALL ASKR('Enter shear lag constant^',SCCON)
         CALL ASKR('Enter shear lag UxEQ weight^',DUXCON)
+        CALL ASKR('Enter wake 1/dissipation-length factor^',DLCON)
        ENDIF
 C
 C--------------------------------------------------------------
@@ -2698,9 +3001,11 @@ C------ display changes and test for convergence
      &   WRITE(*,2000) ITER, RMSBL, RMXBL, VMXBL,IMXBL,ISMXBL,RLX
         IF(RLX.EQ.1.0) 
      &   WRITE(*,2010) ITER, RMSBL, RMXBL, VMXBL,IMXBL,ISMXBL
-         CDP = CD - CDF
-         WRITE(*,2020) ALFA/DTOR, CL, CM, CD, CDF, CDP
-C
+         CDPDIF = CD - CDF
+         WRITE(*,2020) ALFA/DTOR, CL, CM, CD, CDF, CDPDIF
+c         CDSURF = CDP + CDF
+c         WRITE(*,2025) CDSURF, CDF, CDP
+
         IF(RMSBL .LT. EPS1) THEN
          LVCONV = .TRUE.
          AVISC = ALFA
@@ -2715,6 +3020,79 @@ C
       CALL CPCALC(N+NW,QINV,QINF,MINF,CPI)
       CALL CPCALC(N+NW,QVIS,QINF,MINF,CPV)
       IF(LFLAP) CALL MHINGE
+
+
+        is = 1
+        hkmax = 0.
+        hkm = 0.0
+        psep = 0.
+        patt = 0.
+        do ibl = 2, iblte(is)
+          hki = dstr(ibl,is) / thet(ibl,is)
+          hkmax = max(hki,hkmax)
+          if(hkm .lt. 4.0 .and. 
+     &       hki .ge. 4.0      ) then
+           hfrac = (4.0 - hkm) / (hki - hkm )
+           pdefm = uedg(ibl-1,is)**2 * thet(ibl-1,is)
+           pdefi = uedg(ibl  ,is)**2 * thet(ibl  ,is)
+           psep = pdefm*(1.0-hfrac) + pdefi*hfrac
+          endif
+          if(hkm .gt. 4.0 .and. 
+     &       hki .lt. 4.0      ) then
+           hfrac = (4.0 - hkm) / (hki - hkm )
+           pdefm = uedg(ibl-1,is)**2 * thet(ibl-1,is)
+           pdefi = uedg(ibl  ,is)**2 * thet(ibl  ,is)
+           patt = pdefm*(1.0-hfrac) + pdefi*hfrac
+          endif
+          hkm = hki
+        enddo
+        delp = patt - psep
+
+        write(*,9922) 
+     &    acrit(is), hkmax, cd, 2.0*psep, 2.0*patt, 2.0*delp,
+     &    xoctr(is)
+ 9922   format(1x, f10.3, f10.4, f11.6, 3f11.6, f10.4, '     #')
+
+
+
+        izero = ichar('0')
+
+cc      fnum = acrit(is)
+        fnum = xstrip(is)*100.0
+
+        iten = int(  fnum                 / 9.99999 )
+        ione = int( (fnum-float(10*iten)) / 0.99999 )
+        idec = int( (fnum-float(10*iten)-float(ione)) / 0.09999 )
+
+        fname = char(iten+izero) 
+     &       // char(ione+izero) 
+     &       // char(idec+izero) // '.bl'
+        lu = 44
+        open(lu,file=fname,status='unknown')
+        rewind(lu)
+        write(lu,'(a,a)') 
+     &'#       s         ue          H          P         K ',
+     &'        x    -m du/dx'
+c       1234567890 1234567890 1234567890 1234567890 1234567890 1234567890
+        do ibl = 2, iblte(is)
+          iblm = max( ibl-1 , 2 )
+          iblp = min( ibl+1 , iblte(is) )
+          i  = ipan(ibl ,is)
+          hk = dstr(ibl,is) / thet(ibl,is)
+          ddef = dstr(ibl,is)*uedg(ibl,is)
+          pdef = thet(ibl,is)*uedg(ibl,is)**2
+          edef = tstr(ibl,is)*uedg(ibl,is)**3 * 0.5
+          duds = (uedg(iblp,is)-uedg(iblm,is))
+     &         / (xssi(iblp,is)-xssi(iblm,is))
+          dpds = -ddef*duds
+          write(lu,9977) 
+     &       xssi(ibl,is), uedg(ibl,is), hk, pdef, edef, x(i), dpds
+ 9977     format(1x, 3f11.4, 2f11.6, f11.3, e14.6 )
+        enddo
+        close(lu)
+
+
+
       RETURN
 C....................................................................
  2000   FORMAT
@@ -2725,6 +3103,9 @@ C....................................................................
  2020   FORMAT
      &   ( 1X,3X,'   a =', F7.3,'      CL =',F8.4  /
      &     1X,3X,'  Cm =', F8.4, '     CD =',F9.5,
+     &           '   =>   CDf =',F9.5,'    CDp =',F9.5)
+ 2025   FORMAT
+     &   ( 1X,3X, 6X     ,  8X , ' Int CD =',F9.5,
      &           '   =>   CDf =',F9.5,'    CDp =',F9.5)
       END ! VISCAL
 

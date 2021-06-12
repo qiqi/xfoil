@@ -98,8 +98,8 @@ C
 C
 C---- set OSFILE to match the absolute OS database filename
       CHARACTER*128 OSFILE
-      DATA OSFILE / '/var/local/codes/orrs/osmapDP.dat' /
-ccc      DATA OSFILE / '/var/local/codes/orrs/osmap.dat' /
+      DATA OSFILE / '/home/codes/orrs/osmapDP.dat' /
+ccc      DATA OSFILE / '/home/codes/orrs/osmap.dat' /
 c
 c      DATA OSFILE
 c     &/'/afs/athena.mit.edu/course/16/16_d0006/Codes/orrs/osmap_lx.dat'/

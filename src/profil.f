@@ -76,7 +76,7 @@ C
 C
       EBK = EXP(-VB*VKAP)
 C
-      DO 1000 ITER=1, 12
+      DO 1000 ITER=1, 40
 C
         SGN = SIGN( 1.0 , UT )
 C
@@ -172,6 +172,7 @@ C
         DEXU = (EXUPE - EBK)/FLOAT(N-1)
 C
         I = 1
+        ETA(I) = 0.0
         UIP(I)    = 0.0
         UIP_DP(I) = 0.0
         G(I)    = 0.0
@@ -308,10 +309,10 @@ C
         A22  = DO*THN_UT
 cc        A22  = DO*THN_BB
 C
-cc      IF(ABS(REZ1/THETA) .LT. 2.0E-5 .AND.
-cc   &     ABS(REZ2/THETA) .LT. 2.0E-5      ) GO TO 1010
-        IF(ABS(REZ1/THETA) .LT. 1.0E-3 .AND.
-     &     ABS(REZ2/THETA) .LT. 1.0E-3      ) GO TO 1010
+        IF(ABS(REZ1/THETA) .LT. 2.0E-5 .AND.
+     &     ABS(REZ2/THETA) .LT. 2.0E-5      ) GO TO 1010
+c        IF(ABS(REZ1/THETA) .LT. 1.0E-3 .AND.
+c     &     ABS(REZ2/THETA) .LT. 1.0E-3      ) GO TO 1010
 C
         DET = A11*A22 - A12*A21
         B11 =  A22/DET
@@ -332,8 +333,9 @@ C
         UT = UT + RLX*DUT
 cc        BB = BB + RLX*DBB
 c
-cc        write(*,*) iter, do, ut, rez1, rez2
+c        write(*,4400) iter, do, ut, rez1, rez2, rlx
 cc        write(*,*) iter, do, bb, rez1, rez2
+ 4400   format(1x,i5,f10.4,f11.6,2e12.4,f8.4)
 C
  1000 CONTINUE
 C
@@ -402,6 +404,7 @@ C
       UI_RT = UI_UT*UT_RT + UI_DO*DO_RT - DUO_RT
       UI_MS = UI_UT*UT_MS + UI_DO*DO_MS - DUO_MS
 C
+
       RETURN
       END ! PRWALL
 
@@ -576,7 +579,7 @@ C
 C---- set number of righthand sides.
       DATA NRHS / 3 /
 C
-      ITMAX = 20
+      ITMAX = 40
 C
       IF(N.GT.NMAX) STOP 'FS: Array overflow.'
 C
@@ -688,8 +691,10 @@ C----- constant U for outer half
 C
       ENDIF
 c
+
  9991 continue
 C
+      RMS = 1.0
 C
 C---- Newton iteration loop
       DO 100 ITER=1, ITMAX
@@ -707,6 +712,17 @@ C------ zero out A,B,C blocks and righthand sides R
             R(II,3,I) = 0.
   201     CONTINUE
    20   CONTINUE
+C
+C------ calculate Theta in computational space
+        THI = 0.
+        DO I=1,N-1
+          US  = U(I) + U(I+1)
+          DETA = ETA(I+1) - ETA(I)
+          THI = THI + (1.0 - 0.5*US)*0.5*US*DETA
+        ENDDO
+        IF(INORM.EQ.3) THEN
+c         TN = TN/THI**2
+        ENDIF
 C
 C...................................................
 C
@@ -826,10 +842,17 @@ C----- set and linearize  normalized Theta = 1  residual
        Q21 = -THI2
        Q22 = -THI3
 C
+c      R2  =  TN - 0.505
+c      IF(ITER.LT.13) THEN
+c      R2  =  0.
+c      Q21 = 0.0
+c      Q22 = 1.0
+c      ENDIF
+
       ELSE
 C
 C----- set eta scaling coefficient to unity
-       R2  =  1.0 - TN
+       R2  =  TN - 1.0
        Q21 = 0.0
        Q22 = 1.0
 C
@@ -854,7 +877,7 @@ C
    50 CONTINUE
       RMS = SQRT(RMS/(3.0*FLOAT(N) + 3.0))
 C
-      RMAX = MAX(RMAX,ABS(DBU/0.5),ABS(DTN/TN))
+      RMAX = MAX(RMAX,ABS(DBU/1.0),ABS(DTN/TN))
 C
 C---- set underrelaxation factor if necessary by limiting max change to 0.5
       RLX = 1.0
@@ -875,8 +898,10 @@ C---- update BetaU and Theta
       BU = BU + RLX*DBU
       TN = TN + RLX*DTN
 C    
+c     write(*,'(1x,i5,e13.5,3f10.5,2x,f8.4)') iter, rms, bu,thi,tn, rlx
+
 C---- check for convergence
-      IF(ITER.GT.3 .AND. RMS.LT.1.E-5) GO TO 105
+      IF(ITER.GT.3 .AND. RMS .LT. 1.0E-6) GO TO 105
 C
   100 CONTINUE
       WRITE(*,*) 'FS: Convergence failed'

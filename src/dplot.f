@@ -172,6 +172,12 @@ C
  9100   FORMAT(1X,'x y =', 2F8.4,'    Delta* =', G12.4,
      &         '    Rtheta =', F10.2,'    Hk =', F9.4)
 C
+
+c????????????????????????
+c        write(11,*) '# Hk Rtheta=', HK, RTHETA
+c????????????????????????
+
+
         IF(IS.EQ.1) THEN
          UDIR = 1.0
         ELSE
@@ -243,6 +249,7 @@ C------ set Falkner-Skan profile
         HSPEC = HK
         ETAE = 1.5*(3.15 + 1.72/(HK-1.0) + HK)
         GEO = 1.0
+
         CALL FS(INORM,ISPEC,BU,HSPEC,NN,ETAE,GEO,YY,FFS,XX,SFS,DEFS)
         DE = ETAE*TH
 C
@@ -264,6 +271,27 @@ C---- plot axis
       CALL PLOT(XMOD(X1),YMOD(Y1),3)
       CALL PLOT(XMOD(X2),YMOD(Y2),2)
 C
+
+c????????????????????????
+c     dstar = 0.
+c     theta = 0.
+c     tstar = 0.
+c     do k = 1, nn-1
+c       dy =  yy(k+1)-yy(k)
+c       ua = (xx(k+1)+xx(k))*0.5 / xx(nn)
+c       dstar = dstar + (1.0-ua   )   *dy
+c       theta = theta + (1.0-ua   )*ua*dy
+c       tstar = tstar + (1.0-ua**2)*ua*dy
+c     enddo
+c     do k = 1, nn, 2
+ccc       write(11,*) yy(k)/dstar, xx(k)/xx(nn)
+ccc       write(11,*) yy(k)/theta, xx(k)/xx(nn)
+c       write(11,*) yy(k)/tstar, xx(k)/xx(nn)
+c     enddo
+c     write(11,*)
+c????????????????????????
+
+
       DO K=1, NN
         ULOC = UE + UN*(YY(K)-DK)
         XX(K) = XX(K)*UE * UWT * UDIR

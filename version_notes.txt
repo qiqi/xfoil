@@ -369,4 +369,29 @@ XFOIL 6.97 (Apr '08) UPDATE 2
   were not being properly calculated. 
 
 
+XFOIL 6.98 (Oct '08)
+--------------------
+
+- Added ability to plot BL variables versus x or s, toggled with XPLO command
+
+- Increased the max number of BL profiles (BL command in OPER) to 1000.
+
+
+PPLOT  (May '10)  (no change in XFOIL)
+--------------------
+
+- Added options to adjust reference-data colors and symbol types,
+  and added this info to the  pplot.def  startup-default file
+
+- Fixed missing LOGICAL declaration which Gfortran didn't like
+
+XFOIL 6.99 (Jun '13)
+--------------------
+
+- Qspec modification in QDES and MDES, and geometry modification in GDES now
+  have a second "Edit" mode where the input points can be modified by dragging
+  with the cursor.
+
+- Added LAG command in the VPAR menu to allow modification of lag-equation constants.
+
 

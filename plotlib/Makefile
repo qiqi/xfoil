@@ -68,25 +68,6 @@ OBJ3D  = plt_3D.o
 
 ###-------------------------------------------------------------------------
 ### Set compiler, compiler flags, name of output object library
-FC = flang
-CC  = clang
-# Some fortrans need trailing underscores in C interface symbols (see Xwin.c)
-DEFINE = -DUNDERSCORE
-# Uncomment DP to make double-precision version
-#DP = -r8
-FFLAGS  = -O $(DP)
-CFLAGS  = -O $(DEFINE)
-AR = ar r 
-RANLIB = ranlib
-LINKLIB =  -lX11 
-###================================================
-
-
-
-###================================================
-### This line includes your compiler/make options
-### with definitions for compiler and flags
-
 include ./config.make
 
 

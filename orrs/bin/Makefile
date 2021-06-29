@@ -4,17 +4,17 @@ PLTOBJ = /home/codes/Xplot/libPlt.a
 
 #========================================
 #  Default compiler flags
-FC = gfortran #flang
-FLG = -O -fdefault-real-8
+FC = f77
+FLG = -O
 PLTLIB = -lX11
 FTNLIB =
 
 #========================================
 #  Uncomment for Intel Fortran Compiler
-# FC = ifort
-# FLG = -O -fpe0 -CB
-# PLTLIB = -L/usr/X11R6/lib -lX11
-# FTNLIB = 
+FC = ifort
+FLG = -O -fpe0 -CB
+PLTLIB = -L/usr/X11R6/lib -lX11
+FTNLIB = 
 
 #  Additional IFC stuff needed on MIT's Athena system
 #FC = ifc

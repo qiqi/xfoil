@@ -44,9 +44,12 @@ PLTLIB = -L/usr/X11R6/lib -lX11
 ###================================================
 ###  Default compilers and flags
 ###  FFLOPT used for xsolve.f
+FC = f77
+FFLAGS  = -O 
+FFLOPT  = -O
 INSTALLCMD = install -s
 
-CC = gcc # clang
+CC = cc
 CFLAGS = -O -DUNDERSCORE
 
 ##--------------------------
@@ -95,19 +98,33 @@ CFLAGS = -O -DUNDERSCORE
 #FC = g77
 #FFLAGS = -g -O0 -C
 ##--------------------------
-### Intel Fortran Compiler
-FC = gfortran #flang
-#FTNLIB = -Vaxlib /usr/lib/C-ctype.o /usr/lib/C_name.o /usr/lib/ctype-info.o
-#FTNLIB = -Vaxlib
-#FTNLIB = -i_dynamic
-
+### GNU gfortran
+#FC = gfortran
+#FFLAGS = -O3 -fomit-frame-pointer
+#FFLOPT = -O3 -fomit-frame-pointer
+# Debug flags (symbols, array bounds)
+#FFLAGS = -g -O0 -fbounds-check
+#FFLOPT = -g -O0 -fbounds-check
+#
 ### Double precision option
-#FFLAGS = -O -fdefault-real-8 -CB
-#FFLOPT = -O -fdefault-real-8 -CB
-PLTOBJ = ../plotlib/libPlt.a 
+#FFLAGS = -O3 -fdefault-real-8
+#FFLOPT = -O3 -fdefault-real-8
+#FFLAGS = -O3 -fdefault-real-8 -fbounds-check
+#FFLOPT = -O3 -fdefault-real-8 -fbounds-check
+# Debug flags (symbols, array bounds)
+#FFLAGS = -g -O0 -C
+##--------------------------
+### Gfortran
+FC = gfortran
+CHK = 
+CHK = -fbounds-check -finit-real=inf -ffpe-trap=invalid,zero
+DBL = -fdefault-real-8
+FFLAGS = -O $(CHK) $(DBL)
+FFLOPT = -O $(CHK) $(DBL)
+FTNLIB =
 
-FFLAGS = -O -fdefault-real-8 -fdefault-integer-8
-FFLOPT = -O -fdefault-real-8 -fdefault-integer-8
+PLTOBJ = ../plotlib/libPlt_gDP.a 
+
 
 
 all:	 $(PROGS)
@@ -124,15 +141,20 @@ clean:
 
 xfoil: $(XFOILOBJ) $(XUTILOBJ) $(OSOBJ)
 	$(FC) -o xfoil $(XFOILOBJ) $(XUTILOBJ) $(OSOBJ) $(PLTOBJ) $(PLTLIB) $(FTNLIB)
+	$(INSTALLCMD) xfoil $(BINDIR)
 
 pxplot:	$(PXPLOTOBJ) $(XUTILOBJ)
 	$(FC) -o pxplot $(PXPLOTOBJ) $(XUTILOBJ) $(PLTOBJ) $(PLTLIB) $(FTNLIB)
+	$(INSTALLCMD) pxplot $(BINDIR)
 
 pplot:	$(PPLOTOBJ) $(XUTILOBJ)
 	$(FC) -o pplot $(PPLOTOBJ) $(XUTILOBJ)  $(PLTOBJ) $(PLTLIB) $(FTNLIB)
+	$(INSTALLCMD) pplot $(BINDIR)
 
 blu: blu.o profil.o
 	$(FC) -o blu blu.o profil.o
+	$(INSTALLCMD) blu $(BINDIR)
+
 
 blu.o: $(SRC)/blu.f
 	$(FC) -c $(FFLAGS) $(SRC)/blu.f
